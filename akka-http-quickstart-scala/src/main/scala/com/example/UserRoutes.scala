@@ -49,7 +49,7 @@ class UserRoutes(userRegistry: ActorRef[UserRegistry.Command])(implicit val syst
       }),
       pathPrefix("v2")(authorize(hasValidAccess(user))(
           concat(
-            postSession(entity(as[PaintRequests]) { request =>
+            postSession(entity(as[PaintRequest]) { request =>
               complete((StatusCodes.Created, requests.length))
             }),
             path(Segment) { name =>

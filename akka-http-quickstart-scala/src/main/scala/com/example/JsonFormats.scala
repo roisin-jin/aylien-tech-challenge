@@ -15,7 +15,8 @@ object JsonFormats  {
   implicit val actionPerformedJsonFormat = jsonFormat1(ActionPerformed)
 
   implicit val paintDemandJsonFormat = jsonFormat2(PaintDemand)
-  implicit val paintRequestJsonFormat = jsonFormat2(PaintRequest)
-  implicit val paintRequestsJsonFormat = jsonFormat2(PaintRequests)
+  implicit val paintRequestJsonFormat = jsonFormat2(PaintDemands)
+  implicit val paintRequestsJsonFormat = jsonFormat2(PaintRequest)
+  implicit val internalRequestJsonFormat = jsonFormat3(InternalRequest)
 }
 
