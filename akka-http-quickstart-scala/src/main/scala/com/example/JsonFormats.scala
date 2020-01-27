@@ -2,7 +2,7 @@ package com.example
 
 import com.example.UserRegistry.ActionPerformed
 
-//#json-formats
+
 import spray.json.DefaultJsonProtocol
 
 object JsonFormats  {
@@ -14,4 +14,4 @@ object JsonFormats  {
 
   implicit val actionPerformedJsonFormat = jsonFormat1(ActionPerformed)
 }
-//#json-formats
+

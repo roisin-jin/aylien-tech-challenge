@@ -1,15 +1,20 @@
 package com.example
 
-//#user-registry-actor
+
 import akka.actor.typed.ActorRef
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.Behaviors
+import akka.http.scaladsl.model.DateTime
+
 import scala.collection.immutable
 
-//#user-case-classes
+final case class ApiUser(userName: String, expiredDateMs: Long, hasV1Access: Boolean) {
+  val isExpired: Boolean = DateTime(expiredDateMs) < DateTime.now
+}
+
 final case class User(name: String, age: Int, countryOfResidence: String)
 final case class Users(users: immutable.Seq[User])
-//#user-case-classes
+
 
 object UserRegistry {
   // actor protocol
@@ -40,4 +45,4 @@ object UserRegistry {
         registry(users.filterNot(_.name == name))
     }
 }
-//#user-registry-actor
+

@@ -1,39 +1,32 @@
 package com.example
 
-import akka.http.scaladsl.server.Directives._
+import akka.actor.typed.scaladsl.AskPattern._
+import akka.actor.typed.{ ActorRef, ActorSystem }
 import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.model.headers.{ HttpChallenges, HttpCredentials }
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import akka.util.Timeout
+import com.example.UserRegistry._
 
 import scala.concurrent.{ ExecutionContext, Future }
-import com.example.UserRegistry._
-import akka.actor.typed.ActorRef
-import akka.actor.typed.ActorSystem
-import akka.actor.typed.scaladsl.AskPattern._
-import akka.http.scaladsl.server.directives.Credentials
-import akka.util.Timeout
 
-//#import-json-formats
-//#user-routes-class
 class UserRoutes(userRegistry: ActorRef[UserRegistry.Command])(implicit val system: ActorSystem[_]) {
 
-  //#user-routes-class
-  import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
   import JsonFormats._
-  //#import-json-formats
+  import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
+
   implicit val executionContext: ExecutionContext = system.executionContext
   // If ask takes more time than this to complete the request is failed
   private implicit val timeout = Timeout.create(system.settings.config.getDuration("my-app.routes.ask-timeout"))
 
-  def requestUserAuthenticator(credentials: Credentials): Future[Option[String]] =
-    credentials match {
-      case p:Credentials.Provided =>
-        Future {
-          // potentially
-          if (p.verify("p4ssw0rd")) Some(p.identifier)
-          else None
-        }
-      case _ => Future.successful(None)
-    }
+  val challenge = HttpChallenges.basic("apiRealm")
+  def auth(apiKey: HttpCredentials): Boolean = true
+  def apiUserAuthenticator(apiCreds: Option[HttpCredentials]): Future[AuthenticationResult[String]] =
+    Future(apiCreds match {
+        case Some(creds) if auth(creds) => Right("some-user-name-from-creds")
+        case _ => Left(challenge)
+    })
 
   def getUsers(): Future[Users] =
     userRegistry.ask(GetUsers)
@@ -44,13 +37,9 @@ class UserRoutes(userRegistry: ActorRef[UserRegistry.Command])(implicit val syst
   def deleteUser(name: String): Future[ActionPerformed] =
     userRegistry.ask(DeleteUser(name, _))
 
-  //#all-routes
-  //#users-get-post
-  //#users-get-delete
-  val userRoutes: Route = Route.seal(
-    pathPrefix("users")(authenticateBasicAsync("realm", requestUserAuthenticator)( _ =>
-      concat(
-          //#users-get-delete
+  val userRoutes: Route = authenticateOrRejectWithChallenge(apiUserAuthenticator _)( _ =>
+      pathPrefix("users")(
+        concat(
           pathEnd {
             concat(
               get(complete(getUsers())),
@@ -62,28 +51,23 @@ class UserRoutes(userRegistry: ActorRef[UserRegistry.Command])(implicit val syst
                 }
               })
           },
-          //#users-get-delete
-          //#users-get-post
           path(Segment) { name =>
             concat(
               get {
-                //#retrieve-user-info
+
                 rejectEmptyResponse {
                   onSuccess(getUser(name)) { response =>
                     complete(response.maybeUser)
                   }
                 }
-                //#retrieve-user-info
+
               },
               delete {
-                //#users-delete-logic
                 onSuccess(deleteUser(name)) { performed =>
                   complete((StatusCodes.OK, performed))
                 }
-                //#users-delete-logic
+
               })
           }))
-      //#users-get-delete
-    ))
-  //#all-routes
+    )
 }
