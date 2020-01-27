@@ -3,7 +3,16 @@ package com.example
 import akka.http.scaladsl.model.{ StatusCode, StatusCodes }
 import scala.collection.parallel.CollectionConverters._
 
-final case class PaintRequests(colors: Int, requests: Seq[PaintRequest])
+case class InternalRequest(colors: Int, customers: Int, demands: Seq[Seq[Int]])
+final case class PaintRequests(totalColors: Int, requests: Seq[PaintRequest]) {
+  lazy val convertedInternalRequest: InternalRequest = {
+    val customersDemandsMap: Map[Int, Seq[PaintDemand]] = requests.groupBy(_.customerId).view.mapValues(_.flatMap(_.demands))
+    InternalRequest(colors = totalColors,
+      customers = customersDemandsMap.keySet.size,
+      demands = Seq.empty)
+  }
+}
+
 final case class PaintRequest(customerId: Int, demands: Seq[PaintDemand])
 final case class PaintDemand(color: Int, `type`: Int)
 
@@ -22,10 +31,10 @@ object PaintRequestValidation {
   // Business logic check on request sent from users
   // Paint colors range: 1 <= N <= 2000
   // Total customers number: 1 <= M <= 2000
-  // Total customers demands: T <= 3000
+  // Total customers demands: 0 <= T <= 3000
   // Paint type: 0 (gloss) or 1 (matt)
   def validate(request: PaintRequests): Option[StatusCode] = {
-    if (request.colors < 1 || request.colors > 2000) {
+    if (request.totalColors < 1 || request.totalColors > 2000) {
       Some(errorCodeColor)
     } else if (request.requests.isEmpty || request.requests.map(_.demands.length).iterator.sum > 3000) {
       Some(errorCodeDemands)
@@ -36,9 +45,9 @@ object PaintRequestValidation {
       if (invalidPaintColors.nonEmpty) {
         Some(errorCodePaintColorBuilder(invalidPaintColors.map(_.customerId).seq))
       } else {
-        val malFormedPaintTypes = parRequests.filter(_.demands.exists(d => d.`type` != 0 || d.`type` != 1))
-        if (malFormedPaintTypes.nonEmpty) {
-          Some(errorCodePaintTypeBuilder(malFormedPaintTypes.map(_.customerId).seq))
+        val invalidPaintTypes = parRequests.filter(_.demands.exists(d => d.`type` != 0 || d.`type` != 1))
+        if (invalidPaintTypes.nonEmpty) {
+          Some(errorCodePaintTypeBuilder(invalidPaintTypes.map(_.customerId).seq))
         } else None
       }
     }
