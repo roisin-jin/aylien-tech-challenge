@@ -2,8 +2,8 @@ package com.example
 
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.{ ActorRef, ActorSystem }
-import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.model.headers.{ HttpChallenges, HttpCredentials }
+import akka.http.scaladsl.model.{ DateTime, StatusCodes }
+import akka.http.scaladsl.model.headers.{ HttpChallenge, HttpChallenges, HttpCredentials }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
@@ -21,12 +21,9 @@ class UserRoutes(userRegistry: ActorRef[UserRegistry.Command])(implicit val syst
   private implicit val timeout = Timeout.create(system.settings.config.getDuration("my-app.routes.ask-timeout"))
 
   val challenge = HttpChallenges.basic("apiRealm")
-  def auth(apiKey: HttpCredentials): Boolean = true
-  def apiUserAuthenticator(apiCreds: Option[HttpCredentials]): Future[AuthenticationResult[String]] =
-    Future(apiCreds match {
-        case Some(creds) if auth(creds) => Right("some-user-name-from-creds")
-        case _ => Left(challenge)
-    })
+  def auth(apiKey: HttpCredentials): AuthenticationResult[ApiUser] = Right(ApiUser(apiKey.token, DateTime.now.clicks, false))
+  def apiUserAuthenticator(apiCreds: Option[HttpCredentials]): Future[AuthenticationResult[ApiUser]] =
+    Future(apiCreds map auth getOrElse Left(challenge))
 
   def getUsers(): Future[Users] =
     userRegistry.ask(GetUsers)
