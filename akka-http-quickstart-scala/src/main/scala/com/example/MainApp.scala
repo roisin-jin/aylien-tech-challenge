@@ -1,16 +1,14 @@
 package com.example
 
 import akka.actor.typed.ActorSystem
-import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.scaladsl.adapter._
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 
-import scala.util.Failure
-import scala.util.Success
+import scala.util.{ Failure, Success }
 
-
-object QuickstartApp {
+object MainApp {
 
   private def startHttpServer(routes: Route, system: ActorSystem[_]): Unit = {
     // Akka HTTP still needs a classic ActorSystem to start
@@ -35,11 +33,11 @@ object QuickstartApp {
       context.watch(userRegistryActor)
 
       val routes = new UserRoutes(userRegistryActor)(context.system)
-      startHttpServer(routes.userRoutes, context.system)
+      startHttpServer(routes.routes, context.system)
 
       Behaviors.empty
     }
-    val system = ActorSystem[Nothing](rootBehavior, "HelloAkkaHttpServer")
+    val system = ActorSystem[Nothing](rootBehavior, "PaintApiServer-V2")
 
   }
 }
