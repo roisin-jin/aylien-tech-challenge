@@ -19,7 +19,7 @@ class UserRoutes(userRegistry: ActorRef[UserRegistry.Command])(implicit val syst
 
   implicit val executionContext: ExecutionContext = system.executionContext
   // If ask takes more time than this to complete the request is failed
-  private implicit val timeout = Timeout.create(system.settings.config.getDuration("my-app.routes.ask-timeout"))
+  private implicit val timeout = Timeout.create(system.settings.config.getDuration("main-app.routes.ask-timeout"))
 
   val challenge = HttpChallenges.basic("apiRealm")
 
@@ -30,14 +30,9 @@ class UserRoutes(userRegistry: ActorRef[UserRegistry.Command])(implicit val syst
   def getUsers(): Future[Users] =
     userRegistry.ask(GetUsers)
 
-  def getUser(name: String): Future[GetUserResponse] =
-    userRegistry.ask(GetUser(name, _))
+  def getPaintResult: Future[String] = {
 
-  def createUser(user: User): Future[ActionPerformed] =
-    userRegistry.ask(CreateUser(user, _))
-
-  def deleteUser(name: String): Future[ActionPerformed] =
-    userRegistry.ask(DeleteUser(name, _))
+  }
 
   def hasValidAccess(user: ApiUser): Boolean = user.isExpired
 
