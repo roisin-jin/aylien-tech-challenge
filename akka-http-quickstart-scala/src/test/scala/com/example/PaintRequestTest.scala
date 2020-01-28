@@ -8,8 +8,8 @@ class PaintRequestTest extends FunSuite {
 
   test("testConvertedInternalRequest") {
     val paintRequests = PaintRequest(1, Seq(PaintDemands(1, Seq(PaintDemand(1, 1))), PaintDemands(2, Seq(PaintDemand(1, 0)))))
-    val expectedInternalRequestJson = """{"colors":1, "customers":2, "demands":[[1,1,1],[1,1,0]]}"""
-    assertResult(expectedInternalRequestJson)(paintRequests.convertedInternalRequest.toJson.compactPrint)
+    val expectedInternalRequestJson = """{"colors":1,"customers":2,"demands":[[1,1,1],[1,1,0]]}"""
+    assertResult(expectedInternalRequestJson)(paintRequests.getConvertedInternalRequest.toJson.compactPrint)
   }
 
   test("invalid total colors") {

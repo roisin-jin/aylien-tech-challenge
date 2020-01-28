@@ -3,13 +3,14 @@ package com.example
 import akka.http.scaladsl.model.{ StatusCode, StatusCodes }
 
 case class InternalRequest(colors: Int, customers: Int, demands: Seq[Seq[Int]]) {
-  lazy val convertedPaintRequest: PaintRequest = PaintRequest(colors, demands.iterator.map(d =>
+  def getConvertedPaintRequest: PaintRequest = PaintRequest(colors, demands.iterator.map(d =>
     PaintDemands(demands.indexOf(d), d.tail.sliding(2, 2).map(x => PaintDemand(x(0), x(1))).toSeq)).toSeq)
 }
 
 final case class PaintRequest(totalColors: Int, customerDemands: Seq[PaintDemands]) {
-  lazy val customersDemandsMap: Map[Int, Seq[PaintDemand]] = customerDemands.groupBy(_.customerId).view.mapValues(_.flatMap(_.demands)).toMap
-  lazy val convertedInternalRequest: InternalRequest = {
+  def getCustomersDemandsMap: Map[Int, Seq[PaintDemand]] = customerDemands.groupBy(_.customerId).view.mapValues(_.flatMap(_.demands)).toMap
+  def getConvertedInternalRequest: InternalRequest = {
+    val customersDemandsMap = getCustomersDemandsMap
     InternalRequest(colors = totalColors, customers = customersDemandsMap.keySet.size,
       demands = customersDemandsMap.map(p => p._2.length +: p._2.flatMap(d => Seq(d.color, d.`type`))).toSeq)
   }
@@ -20,7 +21,7 @@ final case class PaintDemand(color: Int, `type`: Int)
 
 object PaintRequestValidation {
 
-  val defaultErrorMsg = "Oops theres something wrong with your request"
+  val defaultErrorMsg = "Oops theres something wrong with your request!"
 
   val errorCodeTotalColors = StatusCodes.custom(460, "Total number of colors should be from 1 to 2000", defaultErrorMsg)
   val errorCodeTotalCustomers = StatusCodes.custom(461, "Total number of customers should not exceed 2000", defaultErrorMsg)
@@ -38,19 +39,22 @@ object PaintRequestValidation {
   def validate(request: PaintRequest): Option[StatusCode] = {
     if (request.totalColors < 1 || request.totalColors > 2000) {
       Some(errorCodeTotalColors)
-    } else if (request.customersDemandsMap.keySet.size > 2000) {
-      Some(errorCodeTotalCustomers)
-    } else if (request.customersDemandsMap.values.map(_.length).sum > 3000) {
-      Some(errorCodeTotalDemands)
     } else {
 
-      val invalidPaintDemands = request.customersDemandsMap.filter(_._2.exists(d =>
-        d.color < 1 || d.color > 2000 || (d.`type` != 0 && d.`type` != 1)))
-
-      if (invalidPaintDemands.nonEmpty) {
-        Some(errorCodeInvalidDemand(invalidPaintDemands.keySet))
+      val customerDemandsMap = request.getCustomersDemandsMap
+      if (customerDemandsMap.keySet.size > 2000) {
+        Some(errorCodeTotalCustomers)
+      } else if (customerDemandsMap.values.map(_.length).sum > 3000) {
+        Some(errorCodeTotalDemands)
       } else {
-        None
+        val invalidPaintDemands = request.getCustomersDemandsMap.filter(_._2.exists(d =>
+          d.color < 1 || d.color > 2000 || (d.`type` != 0 && d.`type` != 1)))
+
+        if (invalidPaintDemands.nonEmpty) {
+          Some(errorCodeInvalidDemand(invalidPaintDemands.keySet))
+        } else {
+          None
+        }
       }
     }
   }

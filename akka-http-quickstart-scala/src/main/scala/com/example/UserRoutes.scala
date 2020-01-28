@@ -47,18 +47,20 @@ class UserRoutes(userRegistry: ActorRef[UserRegistry.Command])(implicit val syst
     concat(
       pathPrefix("v1")(authorize(user.hasV1Access)(
         parameters("input")(input => get {
-          val paintRequest = input.parseJson.convertTo[InternalRequest].convertedPaintRequest
+          val paintRequest = input.parseJson.convertTo[InternalRequest].getConvertedPaintRequest
           PaintRequestValidation.validate(paintRequest) map (errorCode =>
-            complete(errorCode)) getOrElse complete(getUsers())
+            complete(errorCode)) getOrElse {
+            complete(getUsers())
+          }
         }))),
       pathPrefix("v2")(authorize(hasValidAccess(user))(
           concat(
             postSession(entity(as[PaintRequest])(request =>
               PaintRequestValidation.validate(request) map (errorCode =>
-                complete(errorCode)) getOrElse complete(getUsers()))),
-            path("history")(authorize(user.hasV1Access){
-              get(complete(getUsers()))
-            })
+                complete(errorCode)) getOrElse {
+                complete(getUsers())
+              })),
+            path("history")(get(complete(getUsers())))
           ))
       )
     ))
