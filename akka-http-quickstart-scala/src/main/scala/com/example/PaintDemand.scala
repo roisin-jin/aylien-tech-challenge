@@ -2,7 +2,10 @@ package com.example
 
 import akka.http.scaladsl.model.{ StatusCode, StatusCodes }
 
-case class InternalRequest(colors: Int, customers: Int, demands: Seq[Seq[Int]])
+case class InternalRequest(colors: Int, customers: Int, demands: Seq[Seq[Int]]) {
+  lazy val convertedPaintRequest: PaintRequest = PaintRequest(colors, demands.iterator.map(d =>
+    PaintDemands(demands.indexOf(d), d.tail.sliding(2, 2).map(x => PaintDemand(x(0), x(1))).toSeq)).toSeq)
+}
 
 final case class PaintRequest(totalColors: Int, customerDemands: Seq[PaintDemands]) {
   lazy val customersDemandsMap: Map[Int, Seq[PaintDemand]] = customerDemands.groupBy(_.customerId).view.mapValues(_.flatMap(_.demands)).toMap

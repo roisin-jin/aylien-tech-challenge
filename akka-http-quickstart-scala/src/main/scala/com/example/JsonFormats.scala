@@ -1,8 +1,6 @@
 package com.example
 
 import com.example.UserRegistry.ActionPerformed
-
-
 import spray.json.DefaultJsonProtocol
 
 object JsonFormats  {

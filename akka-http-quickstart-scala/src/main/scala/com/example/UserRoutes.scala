@@ -15,6 +15,7 @@ class UserRoutes(userRegistry: ActorRef[UserRegistry.Command])(implicit val syst
 
   import JsonFormats._
   import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
+  import spray.json._
 
   implicit val executionContext: ExecutionContext = system.executionContext
   // If ask takes more time than this to complete the request is failed
@@ -44,32 +45,17 @@ class UserRoutes(userRegistry: ActorRef[UserRegistry.Command])(implicit val syst
 
   val routes: Route = authenticateOrRejectWithChallenge(apiUserAuthenticator _)(user =>
     concat(
-      path("v1")(authorize(user.hasV1Access){
-        get(complete(getUsers()))
-      }),
+      pathPrefix("v1")(authorize(user.hasV1Access)(
+        parameters("input")(input => get {
+          val paintRequest = input.parseJson.convertTo[InternalRequest].convertedPaintRequest
+          PaintRequestValidation.validate(paintRequest) map (errorCode =>
+            complete(errorCode)) getOrElse complete(getUsers())
+        }))),
       pathPrefix("v2")(authorize(hasValidAccess(user))(
           concat(
-            postSession(entity(as[PaintRequest]) { request =>
-              complete((StatusCodes.Created, requests.length))
-            }),
-            path(Segment) { name =>
-              concat(
-                get {
-
-                  rejectEmptyResponse {
-                    onSuccess(getUser(name)) { response =>
-                      complete(response.maybeUser)
-                    }
-                  }
-
-                },
-                delete {
-                  onSuccess(deleteUser(name)) { performed =>
-                    complete((StatusCodes.OK, performed))
-                  }
-
-                })
-            },
+            postSession(entity(as[PaintRequest])(request =>
+              PaintRequestValidation.validate(request) map (errorCode =>
+                complete(errorCode)) getOrElse complete(getUsers()))),
             path("history")(authorize(user.hasV1Access){
               get(complete(getUsers()))
             })
