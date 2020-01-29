@@ -15,8 +15,7 @@ object MainApp {
     implicit val classicSystem: akka.actor.ActorSystem = system.toClassic
     import system.executionContext
 
-    val futureBinding = Http().bindAndHandle(routes, "localhost", 9000)
-    futureBinding.onComplete {
+    Http().bindAndHandle(routes, "localhost", 9000) onComplete {
       case Success(binding) =>
         val address = binding.localAddress
         system.log.info("Server online at http://{}:{}/", address.getHostString, address.getPort)
@@ -32,13 +31,13 @@ object MainApp {
       val userRegistryActor = context.spawn(UserRegistry(), "UserRegistryActor")
       context.watch(userRegistryActor)
 
-      val routes = new UserRoutes(userRegistryActor)(context.system)
+      val routes = new PaintRoutes(userRegistryActor)(context.system)
       startHttpServer(routes.routes, context.system)
 
       Behaviors.empty
     }
-    val system = ActorSystem[Nothing](rootBehavior, "PaintApiServer-V2")
 
+    ActorSystem[Nothing](rootBehavior, "PaintApiServer-V2")
   }
 }
 

@@ -29,8 +29,7 @@ object UserRegistry {
 
   def apply(): Behavior[Command] = registry(Set.empty)
 
-  private def registry(users: Set[User]): Behavior[Command] =
-    Behaviors.receiveMessage {
+  private def registry(users: Set[User]): Behavior[Command] = Behaviors.receiveMessage {
       case GetUsers(replyTo) =>
         replyTo ! Users(users.toSeq)
         Behaviors.same

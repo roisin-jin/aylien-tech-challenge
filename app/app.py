@@ -49,7 +49,7 @@ def main(args):
         'failure_rate': args.failure_rate,
         'crashed': False
     })
-    app.run('0.0.0.0', port=args.port)
+    app.run('localhost', port=args.port)
 
     if app.config['crashed']:
         print('app crashed, exiting non-zero')

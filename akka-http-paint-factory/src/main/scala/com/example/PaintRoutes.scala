@@ -11,7 +11,7 @@ import com.example.UserRegistry._
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-class UserRoutes(userRegistry: ActorRef[UserRegistry.Command])(implicit val system: ActorSystem[_]) {
+class PaintRoutes(userRegistry: ActorRef[UserRegistry.Command])(implicit val system: ActorSystem[_]) {
 
   import JsonFormats._
   import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
@@ -26,9 +26,6 @@ class UserRoutes(userRegistry: ActorRef[UserRegistry.Command])(implicit val syst
   def auth(apiKey: HttpCredentials): AuthenticationResult[ApiUser] = Right(ApiUser(apiKey.token, DateTime.now.clicks, false))
   def apiUserAuthenticator(apiCreds: Option[HttpCredentials]): Future[AuthenticationResult[ApiUser]] =
     Future(apiCreds map auth getOrElse Left(challenge))
-
-  def getUsers(): Future[Users] =
-    userRegistry.ask(GetUsers)
 
   def getPaintResult: Future[String] = {
 
@@ -45,7 +42,7 @@ class UserRoutes(userRegistry: ActorRef[UserRegistry.Command])(implicit val syst
           val paintRequest = input.parseJson.convertTo[InternalRequest].getConvertedPaintRequest
           PaintRequestValidation.validate(paintRequest) map (errorCode =>
             complete(errorCode)) getOrElse {
-            complete(getUsers())
+            complete(userRegistry ? GetUsers)
           }
         }))),
       pathPrefix("v2")(authorize(hasValidAccess(user))(
@@ -53,9 +50,9 @@ class UserRoutes(userRegistry: ActorRef[UserRegistry.Command])(implicit val syst
             postSession(entity(as[PaintRequest])(request =>
               PaintRequestValidation.validate(request) map (errorCode =>
                 complete(errorCode)) getOrElse {
-                complete(getUsers())
+                complete(userRegistry ? GetUsers)
               })),
-            path("history")(get(complete(getUsers())))
+            path("history")(get(complete(userRegistry ? GetUsers)))
           ))
       )
     ))

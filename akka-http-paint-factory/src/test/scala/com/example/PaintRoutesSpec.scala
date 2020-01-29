@@ -11,7 +11,7 @@ import org.scalatest.{ Matchers, WordSpec }
 import akka.actor.typed.scaladsl.adapter._
 
 
-class UserRoutesSpec extends WordSpec with Matchers with ScalaFutures with ScalatestRouteTest {
+class PaintRoutesSpec extends WordSpec with Matchers with ScalaFutures with ScalatestRouteTest {
 
 
   // the Akka HTTP route testkit does not yet support a typed actor system (https://github.com/akka/akka-http/issues/2036)
@@ -26,7 +26,7 @@ class UserRoutesSpec extends WordSpec with Matchers with ScalaFutures with Scala
   // but we could "mock" it by implementing it in-place or by using a TestProbe
   // created with testKit.createTestProbe()
   val userRegistry = testKit.spawn(UserRegistry())
-  lazy val routes = new UserRoutes(userRegistry).routes
+  lazy val routes = new PaintRoutes(userRegistry).routes
 
   // use the json formats to marshal and unmarshall objects in the test
   import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
