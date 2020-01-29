@@ -4,6 +4,7 @@ import akka.actor.{ Actor, ActorLogging }
 import akka.actor.typed.{ ActorRef, ActorSystem, Behavior }
 import akka.actor.typed.scaladsl.Behaviors
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model.{ HttpMethods, HttpRequest, HttpResponse, StatusCodes, Uri }
 import akka.util.ByteString
 
@@ -29,7 +30,7 @@ class PaintWsActor()(implicit val system: ActorSystem[_]) {
   }
 
   def makeWsRequest(input: String): WsReply = {
-    val uri = Uri(PY_APP_URL + Uri./ + INDEX_PATH).withRawQueryString(input)
+    val uri = Uri(PY_APP_URL + Uri./ + INDEX_PATH).withQuery(Query("input" -> input))
     http.singleRequest(HttpRequest(HttpMethods.GET, uri)) onComplete {
 
     }
