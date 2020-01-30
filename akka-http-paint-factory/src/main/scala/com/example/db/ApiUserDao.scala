@@ -11,13 +11,13 @@ trait BaseDao extends DatabaseConfig {
 
 }
 
-object UsersDao extends BaseDao {
+object ApiUserDao extends BaseDao {
 
-  val apiUserTable = TableQuery[ApiUserTable]
+  private lazy val apiUserTable = TableQuery[ApiUserTable]
 
-  def findAllActiveUsers: Future[Seq[ApiUser]] = apiUserTable.filter(_.isEnabled).result
+  def findAllActiveUsers: Future[Seq[ApiUser]] = apiUserTable.filterNot(_.hasExpired).result
 
-  def findByAppIdAndKey(appId: String, appKey: String): Future[ApiUser] =
-    apiUserTable.filter(r => r.appId === appId && r.appKey === appKey).result.head
+  def findByAppIdAndKey(appId: String, appKey: String): Future[Option[ApiUser]] =
+    apiUserTable.filter(r => r.appId === appId && r.appKey === appKey).result.headOption
 }
 
