@@ -1,7 +1,9 @@
 package com.example
 
 import akka.actor.typed.scaladsl.AskPattern._
+import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.{ ActorRef, ActorSystem }
+import akka.http.caching.scaladsl.CachingSettings
 import akka.http.scaladsl.model.headers.HttpChallenges
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
@@ -23,10 +25,18 @@ class PaintRoutes(dbRegistryActor: ActorRef[DbRegistryActor.Command])(implicit v
 
   val challenge = HttpChallenges.basic("paintFactory")
 
+  lazy val defaultCacheSettings = CachingSettings(system.toClassic)
+  lazy val userCache = ApiCacheSetting.generateUserCache(defaultCacheSettings)
+  lazy val wsCache = ApiCacheSetting.generatePathCache(defaultCacheSettings)
+
   def authenticate(creds: ApiCredential): Future[Option[ApiUser]] = dbRegistryActor ? (GetUser(creds, _))
-  
   def apiUserAuthenticator(apiCreds: Option[ApiCredential]): Future[AuthenticationResult[ApiUser]] = apiCreds match {
-    case Some(creds) => authenticate(creds) map (_.map(Right(_)).getOrElse(Left(challenge)))
+    case Some(creds) => userCache.get(creds) getOrElse {
+      val authenticationResult = authenticate(creds) map (_.map(Right(_)).getOrElse(Left(challenge)))
+      // Initate cache if it's the first time seeing user
+      userCache.put(creds, authenticationResult.mapTo[AuthenticationResult[ApiUser]])
+      authenticationResult
+    }
     case None => Future(Left(challenge))
   }
 
