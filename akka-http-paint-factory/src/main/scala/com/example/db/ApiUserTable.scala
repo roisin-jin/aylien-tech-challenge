@@ -1,6 +1,5 @@
 package com.example.db
 
-import java.time.{ Instant, ZoneId }
 import slick.jdbc.MySQLProfile.api._
 
 final case class ApiUser(id: Option[Long], email: String, company: String, isEnabled: Boolean, hasV1Access: Boolean)
