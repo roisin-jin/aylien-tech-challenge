@@ -5,13 +5,14 @@ import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.scaladsl.adapter._
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
+import com.example.db.DbRegistryActor
 
 import scala.util.{ Failure, Success }
 
 object MainApp {
 
   private def startHttpServer(routes: Route, system: ActorSystem[_]): Unit = {
-    // Akka HTTP still needs a classic ActorSystem to start
+    // Akka HTTP needs a classic ActorSystem to start
     implicit val classicSystem: akka.actor.ActorSystem = system.toClassic
     import system.executionContext
 
@@ -28,10 +29,10 @@ object MainApp {
   def main(args: Array[String]): Unit = {
 
     val rootBehavior = Behaviors.setup[Nothing] { context =>
-      val userRegistryActor = context.spawn(UserRegistry(), "UserRegistryActor")
-      context.watch(userRegistryActor)
+      val dbRegistryActor = context.spawn(DbRegistryActor(), "DbRegistryActor")
+      context.watch(dbRegistryActor)
 
-      val routes = new PaintRoutes(userRegistryActor)(context.system)
+      val routes = new PaintRoutes(dbRegistryActor)(context.system)
       startHttpServer(routes.routes, context.system)
 
       Behaviors.empty
