@@ -16,6 +16,10 @@ lazy val root = (project in file(".")).
       "ch.qos.logback"    % "logback-classic"           % "1.2.3",
       "org.scala-lang.modules" %% "scala-parallel-collections" % "0.2.0",
 
+      "com.typesafe.slick" %% "slick"               % "3.3.2",
+      "com.typesafe.slick" %% "slick-hikaricp"      % "3.3.2",
+      "mysql"              % "mysql-connector-java" % "5.1.34",
+
       "com.typesafe.akka" %% "akka-http-testkit"        % akkaHttpVersion % Test,
       "com.typesafe.akka" %% "akka-actor-testkit-typed" % akkaVersion     % Test,
       "org.scalatest"     %% "scalatest"                % "3.0.8"         % Test

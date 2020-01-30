@@ -8,10 +8,6 @@ import akka.http.scaladsl.model.DateTime
 
 import scala.collection.immutable
 
-final case class ApiUser(userName: String, expiredDateMs: Long, hasV1Access: Boolean) {
-  val isExpired: Boolean = DateTime(expiredDateMs) < DateTime.now
-}
-
 final case class User(name: String, age: Int, countryOfResidence: String)
 final case class Users(users: immutable.Seq[User])
 

@@ -2,12 +2,13 @@ package com.example
 
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.{ ActorRef, ActorSystem }
-import akka.http.scaladsl.model.{ DateTime, StatusCodes }
-import akka.http.scaladsl.model.headers.{ HttpChallenge, HttpChallenges, HttpCredentials }
+import akka.http.scaladsl.model.DateTime
+import akka.http.scaladsl.model.headers.{ HttpChallenges, HttpCredentials }
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.{ Route, StandardRoute }
+import akka.http.scaladsl.server.Route
 import akka.util.Timeout
 import com.example.UserRegistry._
+import com.example.db.ApiUser
 
 import scala.concurrent.{ ExecutionContext, Future }
 
@@ -23,15 +24,13 @@ class PaintRoutes(userRegistry: ActorRef[UserRegistry.Command])(implicit val sys
 
   val challenge = HttpChallenges.basic("apiRealm")
 
-  def auth(apiKey: HttpCredentials): AuthenticationResult[ApiUser] = Right(ApiUser(apiKey.token, DateTime.now.clicks, false))
+  def auth(apiKey: HttpCredentials): AuthenticationResult[ApiUser] = Right(ApiUser(Some(1L), apiKey.token, "company", true, false))
   def apiUserAuthenticator(apiCreds: Option[HttpCredentials]): Future[AuthenticationResult[ApiUser]] =
     Future(apiCreds map auth getOrElse Left(challenge))
 
-  def getPaintResult: Future[String] = {
+  def getPaintResult: Future[String] = Future("")
 
-  }
-
-  def hasValidAccess(user: ApiUser): Boolean = user.isExpired
+  def hasValidAccess(user: ApiUser): Boolean = user.isEnabled
 
   val postSession = pathEnd & post
 
