@@ -1,6 +1,6 @@
 package com.example
 
-import akka.actor.typed.ActorSystem
+import akka.actor.ActorSystem
 import akka.actor.typed.scaladsl.adapter._
 import akka.actor.{ Actor, Props }
 import akka.http.scaladsl.Http
@@ -20,18 +20,17 @@ object PaintWsActor {
 
 
 
-class PaintWsActor(system: ActorSystem[_]) extends Actor {
+class PaintWsActor(implicit system: ActorSystem) extends Actor {
 
-  import system.executionContext
-  implicit val classicSystem: akka.actor.ActorSystem = system.toClassic
+  import system.dispatcher
 
-  private val http = Http(classicSystem)
+  private val http = Http(system)
   private val PY_APP_URL = system.settings.config.getString("paint-ws.url")
   private val INDEX_PATH = system.settings.config.getString("paint-ws.endpoints.index")
   private val CRASH_PATH = system.settings.config.getString("paint-ws.endpoints.crash")
 
 
-  def receive = {
+  def receive: Receive = {
     case ApiUserRequestRecord(_, userId, input, _) =>
       val requestSender = sender()
       val uri = Uri(PY_APP_URL + Uri./ + INDEX_PATH).withQuery(Query("input" -> input))

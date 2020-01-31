@@ -1,46 +1,40 @@
 package com.example
 
-import akka.actor.typed.scaladsl.AskPattern._
-import akka.actor.typed.scaladsl.adapter._
-import akka.actor.typed.{ ActorRef, ActorSystem }
+import akka.actor.{ ActorRef, ActorSystem }
 import akka.http.caching.scaladsl.CachingSettings
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.model.headers.HttpChallenges
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import akka.pattern.ask
 import akka.util.Timeout
-import com.example.db.DbRegistryActor.{ CreateUser, GetUser }
-import com.example.db.{ ApiUser, ApiUserRequestRecord, DbRegistryActor }
+import com.example.db.DbRegistryActor.{ CreateUser, GetUser, GetUserResponse }
+import com.example.db.{ ApiUser, ApiUserRequestRecord }
 import com.typesafe.config.Config
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-class PaintRoutes(
-  dbRegistryActor: ActorRef[DbRegistryActor.Command],
-  paintWsActor: PaintWsActor)(implicit val system: ActorSystem[_]) {
+class PaintRoutes(dbRegistryActor: ActorRef, paintWsActor: ActorRef)(implicit system: ActorSystem) {
 
   import JsonFormats._
   import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
   import spray.json._
 
-  implicit val executionContext: ExecutionContext = system.executionContext
+  implicit val executionContext: ExecutionContext = system.dispatcher
   // If ask takes more time than this to complete the request is failed
   private implicit val timeout = Timeout.create(system.settings.config.getDuration("main-app.routes.ask-timeout"))
   private val superUser: Config = system.settings.config.getConfig("superUser")
 
   val challenge = HttpChallenges.basic("paintFactory")
 
-  lazy val defaultCacheSettings = CachingSettings(system.toClassic)
+  lazy val defaultCacheSettings = CachingSettings(system)
   lazy val userCache = ApiCacheSetting.generateUserCache(defaultCacheSettings)
   lazy val wsCache = ApiCacheSetting.generatePathCache(defaultCacheSettings)
 
-  def findUser(creds: ApiCredential): Future[Option[ApiUser]] = dbRegistryActor ? (GetUser(creds, _))
-
-  def createUser(apiUser: ApiUser): Future[String] = dbRegistryActor ? (CreateUser(apiUser, _))
-
+  def findUser(creds: ApiCredential): Future[GetUserResponse] = (dbRegistryActor ? GetUser(creds)).mapTo[GetUserResponse]
   def apiUserAuthenticator(apiCreds: Option[ApiCredential]): Future[AuthenticationResult[ApiUser]] = apiCreds match {
     case Some(creds) => userCache.get(creds) getOrElse {
-      val authenticationResult = findUser(creds) map (_.map(Right(_)).getOrElse(Left(challenge)))
+      val authenticationResult = findUser(creds) map (_.user.map(Right(_)).getOrElse(Left(challenge)))
       // Initate cache if it's the first time seeing user
       userCache.put(creds, authenticationResult.mapTo[AuthenticationResult[ApiUser]])
       authenticationResult
@@ -48,11 +42,9 @@ class PaintRoutes(
     case None => Future(Left(challenge))
   }
 
-  def getPaintResult(input: String): Future[String] = {
-    paintWsActor ?
+  def getPaintResult(apiUserRequestRecord: ApiUserRequestRecord): Future[String] = {
+    (paintWsActor ? apiUserRequestRecord).mapTo[String]
   }
-
-  def hasValidAccess(user: ApiUser): Boolean = !user.hasExpired
 
   def isSuperUser(user: ApiUser): Boolean = user.appId == superUser.getString("appId") && user.appKey == superUser.getString("appKey")
 
@@ -70,7 +62,7 @@ class PaintRoutes(
         }))),
       pathPrefix("v2")(
         concat(
-          postSession(authorize(hasValidAccess(user))(
+          postSession(authorize(user.hasValidAccess)(
             entity(as[PaintRequest])(request =>
               PaintRequestValidation.validate(request) map (errorCode =>
                 complete(errorCode)) getOrElse {
@@ -86,7 +78,7 @@ class PaintRoutes(
           path("crash")(onSuccess(getPaintResult(""))(msg =>
             complete((StatusCodes.OK, msg)))),
           path("user")(postSession(entity(as[ApiUser])(newApiUser =>
-            onSuccess(createUser(newApiUser))(msg =>
+            onSuccess((dbRegistryActor ? CreateUser(newApiUser)).mapTo[String])(msg =>
               complete((StatusCodes.Created, msg)))
           )))
         )

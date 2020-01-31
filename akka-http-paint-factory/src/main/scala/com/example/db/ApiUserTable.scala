@@ -3,7 +3,9 @@ package com.example.db
 import slick.jdbc.MySQLProfile.api._
 
 case class ApiUser(id: Option[Long], appId: String, appKey: String,
-  email: String, company: Option[String], hasExpired: Boolean, hasV1Access: Boolean)
+  email: String, company: Option[String], hasExpired: Boolean, hasV1Access: Boolean) {
+  def hasValidAccess: Boolean = !hasExpired
+}
 
 case class ApiUserRequestRecord(id: Option[Long], userId: Long, requestInput: String, requestedTime: Long)
 
