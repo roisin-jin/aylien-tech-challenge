@@ -1,28 +1,30 @@
 package com.example.db
 
-import org.h2.engine.Database
-import org.scalatest.{ FunSuite, Matchers }
 import org.scalatest.concurrent.ScalaFutures
-
-object TestDbConfig extends DatabaseConfig {
-
-  override lazy val db = Database
-}
+import org.scalatest.{ FunSuite, Matchers }
 
 class ApiUserDaoTest extends FunSuite with Matchers with ScalaFutures {
 
-  val testInstance = new ApiUserDao()
-
-  test("testFindAllActiveUsers") {
-
-  }
+  val testInstance = new ApiUserDao(TestDbConfig)
+  val testUser = ApiUser(None, "testAppId", "testappKey", "test@email.com", None, true, false)
 
   test("testInsertApiUser") {
 
+    whenReady(testInstance.insertApiUser(testUser)) { inserted =>
+      inserted should ===(1)
+    }
+  }
+
+  test("testFindAllActiveUsers") {
+    whenReady(testInstance.findAllActiveUsers) { allUsers =>
+      allUsers.isEmpty should ===(true)
+    }
   }
 
   test("testFindByAppIdAndKey") {
-
+    whenReady(testInstance.findByAppIdAndKey(testUser.appId, testUser.appKey)) { user =>
+      user should ===(Some(testUser))
+    }
   }
 
 }

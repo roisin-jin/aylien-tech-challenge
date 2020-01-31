@@ -6,7 +6,6 @@ import akka.actor.typed.scaladsl.adapter._
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import com.example.db.{ DbRegistryActor, ProdDdConfig }
-import slick.basic.DatabaseConfig
 
 import scala.util.{ Failure, Success }
 

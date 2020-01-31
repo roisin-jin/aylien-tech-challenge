@@ -1,69 +1,52 @@
 package com.example
 
-import akka.actor.{ Actor, ActorLogging }
-import akka.actor.typed.{ ActorRef, ActorSystem, Behavior }
-import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.ActorSystem
+import akka.actor.typed.scaladsl.adapter._
+import akka.actor.{ Actor, Props }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.Uri.Query
-import akka.http.scaladsl.model.{ HttpMethods, HttpRequest, HttpResponse, StatusCodes, Uri }
-import akka.util.ByteString
+import akka.http.scaladsl.model.{ HttpMethods, HttpRequest, StatusCodes, Uri }
+import akka.http.scaladsl.unmarshalling.Unmarshal
+import com.example.PaintWsActor.Crash
+import com.example.db.ApiUserRequestRecord
 
-import scala.concurrent.Future
+import scala.util.Success
 
-class PaintWsActor()(implicit val system: ActorSystem[_]) {
+object PaintWsActor {
 
-  case class Crash(replyTo: ActorRef[WsReply])
-  case class WsRequest(input: String, replyTo: ActorRef[WsReply])
-  case class WsReply(result: String)
-
-  private lazy val http = Http(system)
-  private val PY_APP_URL = system.settings.config.getString("paint-ws.url")
-  private val INDEX_PATH = system.settings.config.getString("paint-ws.endpoints.index")
-
-  /*
-  def getInstance: Behavior[Future[WsReply]] = Behaviors.receiveMessage {
-    case WsRequest(input, replyTo) =>
-      replyTo ! makeWsRequest(input)
-      Behaviors.same
-    case Crash(replyTo) =>
-      replyTo ! WsReply(s"Python app just crashed")
-      Behaviors.same
-  }*/
-
-  def makeWsRequest(input: String): WsReply = {
-    val uri = Uri(PY_APP_URL + Uri./ + INDEX_PATH).withQuery(Query("input" -> input))
-    //http.singleRequest(HttpRequest(HttpMethods.GET, uri)) onComplete {
-    WsReply("")
-  }
-
+  case class Crash()
+  def props: Props = Props[PaintWsActor]
 }
 
-import akka.actor.{ Actor, ActorLogging }
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.model._
-import akka.stream.{ ActorMaterializer, ActorMaterializerSettings }
-import akka.util.ByteString
 
-class Myself()(implicit val system: ActorSystem[_]) extends Actor with ActorLogging {
 
-  import akka.pattern.pipe
-  import context.dispatcher
+class PaintWsActor(system: ActorSystem[_]) extends Actor {
 
-  val http = Http(system)
+  import system.executionContext
+  implicit val classicSystem: akka.actor.ActorSystem = system.toClassic
 
-  override def preStart() = {
-    http.singleRequest(HttpRequest(uri = "http://akka.io"))
-      .pipeTo(self)
-  }
+  private val http = Http(classicSystem)
+  private val PY_APP_URL = system.settings.config.getString("paint-ws.url")
+  private val INDEX_PATH = system.settings.config.getString("paint-ws.endpoints.index")
+  private val CRASH_PATH = system.settings.config.getString("paint-ws.endpoints.crash")
+
 
   def receive = {
-    case HttpResponse(StatusCodes.OK, headers, entity, _) =>
-      entity.dataBytes.runFold(ByteString(""))(_ ++ _).foreach { body =>
-        log.info("Got response, body: " + body.utf8String)
+    case ApiUserRequestRecord(_, userId, input, _) =>
+      val requestSender = sender()
+      val uri = Uri(PY_APP_URL + Uri./ + INDEX_PATH).withQuery(Query("input" -> input))
+      http.singleRequest(HttpRequest(HttpMethods.GET, uri)) onComplete {
+        case Success(resp) if resp.status == StatusCodes.OK =>
+          Unmarshal(resp.entity).to[String] recover { case e => requestSender ! e} map (msg => sender() ! msg)
+        case _ =>
+          system.log.info("Paint request {} from user {} has failed", input, userId)
       }
-    case resp @ HttpResponse(code, _, _, _) =>
-      log.info("Request failed, response code: " + code)
-      resp.discardEntityBytes()
+    case Crash() =>
+      val uri = Uri(PY_APP_URL + Uri./ + CRASH_PATH)
+      http.singleRequest(HttpRequest(HttpMethods.GET, uri)) onComplete {
+        case Success("") => sender() ! "The app has crashed"
+        case _ => system.log.info("Crash request has failed")
+      }
   }
 
 }

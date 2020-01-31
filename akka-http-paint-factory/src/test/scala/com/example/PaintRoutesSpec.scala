@@ -9,7 +9,7 @@ import akka.http.scaladsl.testkit.ScalatestRouteTest
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ Matchers, WordSpec }
 import akka.actor.typed.scaladsl.adapter._
-import com.example.db.DbRegistryActor
+import com.example.db.{ DbRegistryActor, TestDbConfig }
 
 
 class PaintRoutesSpec extends WordSpec with Matchers with ScalaFutures with ScalatestRouteTest {
@@ -26,15 +26,14 @@ class PaintRoutesSpec extends WordSpec with Matchers with ScalaFutures with Scal
   // We use the real UserRegistryActor to test it while we hit the Routes,
   // but we could "mock" it by implementing it in-place or by using a TestProbe
   // created with testKit.createTestProbe()
-  val dbRegistry = testKit.spawn(DbRegistryActor())
+  val dbRegistry = testKit.spawn(new DbRegistryActor(TestDbConfig).register())
   lazy val routes = new PaintRoutes(dbRegistry).routes
 
   // use the json formats to marshal and unmarshall objects in the test
   import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
   import JsonFormats._
 
-
-
+  /*
   "UserRoutes" should {
     "return no users if no present (GET /users)" in {
       // note that there's no need for the host part in the uri:
@@ -88,7 +87,7 @@ class PaintRoutesSpec extends WordSpec with Matchers with ScalaFutures with Scal
     }
 
   }
-
+*/
 
 
 }

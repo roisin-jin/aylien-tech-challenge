@@ -7,17 +7,17 @@ case class InternalRequest(colors: Int, customers: Int, demands: Seq[Seq[Int]]) 
     PaintDemands(demands.indexOf(d), d.tail.sliding(2, 2).map(x => PaintDemand(x(0), x(1))).toSeq)).toSeq)
 }
 
+final case class PaintDemands(customerId: Int, demands: Seq[PaintDemand])
+final case class PaintDemand(color: Int, `type`: Int)
 final case class PaintRequest(totalColors: Int, customerDemands: Seq[PaintDemands]) {
-  def getCustomersDemandsMap: Map[Int, Seq[PaintDemand]] = customerDemands.groupBy(_.customerId).view.mapValues(_.flatMap(_.demands)).toMap
+  def getCustomersDemandsMap: Map[Int, Seq[PaintDemand]] =
+    customerDemands.groupBy(_.customerId).view.mapValues(_.flatMap(_.demands)).toMap
   def getConvertedInternalRequest: InternalRequest = {
     val customersDemandsMap = getCustomersDemandsMap
     InternalRequest(colors = totalColors, customers = customersDemandsMap.keySet.size,
-      demands = customersDemandsMap.map(p => p._2.length +: p._2.flatMap(d => Seq(d.color, d.`type`))).toSeq)
+      demands = customersDemandsMap.toSeq.map(p => p._2.length +: p._2.flatMap(d => Seq(d.color, d.`type`))))
   }
 }
-
-final case class PaintDemands(customerId: Int, demands: Seq[PaintDemand])
-final case class PaintDemand(color: Int, `type`: Int)
 
 object PaintRequestValidation {
 

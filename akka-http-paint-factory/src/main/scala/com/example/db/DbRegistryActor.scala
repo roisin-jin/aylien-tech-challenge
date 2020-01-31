@@ -4,7 +4,6 @@ import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ ActorRef, ActorSystem, Behavior }
 import com.example.ApiCredential
 
-import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success }
 
 object DbRegistryActor {
@@ -15,7 +14,9 @@ object DbRegistryActor {
 
   final case class GetUserRequestRecords(userId: Long, size: Int, offset: Int, replyTo: ActorRef[Seq[ApiUserRequestRecord]]) extends Command
 
-  final case class CreateUserRequestRecord(apiUserRequestRecord: ApiUserRequestRecord, replyTo: ActorRef[Option[Long]]) extends Command
+  final case class CreateUser(apiUser: ApiUser, replyTo: ActorRef[String]) extends Command
+
+  final case class CreateUserRequestRecord(apiUserRequestRecord: ApiUserRequestRecord, replyTo: ActorRef[String]) extends Command
 
 }
 
@@ -32,24 +33,38 @@ class DbRegistryActor(val dbConfig: DatabaseConfig)(implicit system: ActorSystem
 
     Behaviors.receiveMessage {
       case GetUser(appCreds, replyTo) =>
-        handleFutureResult(apiUserDao.findByAppIdAndKey(appCreds.appId, appCreds.appKey), replyTo, failure =>
-          system.log.error("Api User with id - {} and key - {} lookup is failed: {}", appCreds.appId, appCreds.appKey, failure))
+        apiUserDao.findByAppIdAndKey(appCreds.appId, appCreds.appKey) onComplete {
+          case Success(result) => replyTo ! result
+          case Failure(failure) =>
+            system.log.error("Api User with id - {} and key - {} lookup is failed: {}", appCreds.appId, appCreds.appKey, failure)
+            replyTo ! None
+        }
         Behaviors.same
       //Get user request history
       case GetUserRequestRecords(userId, size, offset, replyTo) =>
-        handleFutureResult(apiUserRequestRecordDao.findUserRequestsHistory(userId, size, offset), replyTo, failure =>
-            system.log.error("Failed to find request history for user {} : {}", userId, failure))
+        apiUserRequestRecordDao.findUserRequestsHistory(userId, size, offset) onComplete {
+          case Success(result) => replyTo ! result
+          case Failure(failure) =>
+            system.log.error("Failed to find request history for user {} : {}", userId, failure)
+            replyTo ! Seq.empty
+        }
+        Behaviors.same
+      case CreateUser(apiUser, replyTo) =>
+        apiUserDao.insertApiUser(apiUser) onComplete {
+          case Success(result) => replyTo ! "SUCCESS"
+          case Failure(failure) =>
+            system.log.error("Failed to create new user {}", apiUser.email, failure)
+            replyTo ! failure.getMessage
+        }
         Behaviors.same
       case CreateUserRequestRecord(apiUserRequestRecord, replyTo) =>
-        handleFutureResult(apiUserRequestRecordDao.insertUserRequest(apiUserRequestRecord), replyTo, failure =>
-          system.log.error("Cannot add request record for user id {} - {}", apiUserRequestRecord.userId, failure))
+        apiUserRequestRecordDao.insertUserRequest(apiUserRequestRecord) onComplete {
+          case Success(result) => replyTo ! "SUCCESS"
+          case Failure(failure) =>
+            system.log.error("Cannot add request record for user id {} - {}", apiUserRequestRecord.userId, failure)
+            replyTo ! failure.getMessage
+        }
         Behaviors.same
     }
-  }
-
-  def handleFutureResult[T](futureResult: Future[T], replyTo: ActorRef[T],
-    onFailure: Failure[Throwable] => Unit)(implicit ec: ExecutionContext) = futureResult onComplete {
-    case Success(result) => replyTo ! result
-    case Failure(failure) => onFailure(failure)
   }
 }

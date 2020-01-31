@@ -23,7 +23,7 @@ object ApiSecurityDirectives extends SecurityDirectives {
     }
   }
 
-  def authenticateOrRejectWithChallenge[T](authenticator: Option[ApiCredential] => Future[AuthenticationResult[T]]): AuthenticationDirective[T] =
+  def apiAuthenticateOrRejectWithChallenge[T](authenticator: Option[ApiCredential] => Future[AuthenticationResult[T]]): AuthenticationDirective[T] =
     extractApiCredentials flatMap (cred => onSuccess(authenticator(cred)) flatMap {
       case Right(user) => provide(user)
       case Left(challenge) =>
