@@ -18,7 +18,9 @@ trait DatabaseConfig {
 
   import driver.api._
 
-  def db = Database.forConfig("database")
+  lazy val db = Database.forConfig("database")
   implicit val session: Session = db.createSession()
 
 }
+
+object ProdDdConfig extends DatabaseConfig {}

@@ -5,7 +5,8 @@ import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.scaladsl.adapter._
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
-import com.example.db.DbRegistryActor
+import com.example.db.{ DbRegistryActor, ProdDdConfig }
+import slick.basic.DatabaseConfig
 
 import scala.util.{ Failure, Success }
 
@@ -29,10 +30,12 @@ object MainApp {
   def main(args: Array[String]): Unit = {
 
     val rootBehavior = Behaviors.setup[Nothing] { context =>
-      val dbRegistryActor = context.spawn(DbRegistryActor(), "DbRegistryActor")
+      implicit val system = context.system
+
+      val dbRegistryActor = context.spawn(new DbRegistryActor(ProdDdConfig).register(), "DbRegistryActor")
       context.watch(dbRegistryActor)
 
-      val routes = new PaintRoutes(dbRegistryActor)(context.system)
+      val routes = new PaintRoutes(dbRegistryActor)
       startHttpServer(routes.routes, context.system)
 
       Behaviors.empty

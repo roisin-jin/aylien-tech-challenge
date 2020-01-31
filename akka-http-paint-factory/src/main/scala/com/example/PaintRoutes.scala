@@ -30,6 +30,7 @@ class PaintRoutes(dbRegistryActor: ActorRef[DbRegistryActor.Command])(implicit v
   lazy val wsCache = ApiCacheSetting.generatePathCache(defaultCacheSettings)
 
   def authenticate(creds: ApiCredential): Future[Option[ApiUser]] = dbRegistryActor ? (GetUser(creds, _))
+
   def apiUserAuthenticator(apiCreds: Option[ApiCredential]): Future[AuthenticationResult[ApiUser]] = apiCreds match {
     case Some(creds) => userCache.get(creds) getOrElse {
       val authenticationResult = authenticate(creds) map (_.map(Right(_)).getOrElse(Left(challenge)))
@@ -42,7 +43,7 @@ class PaintRoutes(dbRegistryActor: ActorRef[DbRegistryActor.Command])(implicit v
 
   def getPaintResult: Future[String] = Future("")
 
-  def hasValidAccess(user: ApiUser): Boolean = user.hasExpired
+  def hasValidAccess(user: ApiUser): Boolean = !user.hasExpired
 
   val postSession = pathEnd & post
 
@@ -56,15 +57,16 @@ class PaintRoutes(dbRegistryActor: ActorRef[DbRegistryActor.Command])(implicit v
             complete(dbRegistryActor ? GetUsers)
           }
         }))),
-      pathPrefix("v2")(authorize(hasValidAccess(user))(
+      pathPrefix("v2")(
         concat(
-          postSession(entity(as[PaintRequest])(request =>
-            PaintRequestValidation.validate(request) map (errorCode =>
-              complete(errorCode)) getOrElse {
-              complete(dbRegistryActor ? GetUsers)
-            })),
-          path("history")(get(complete(dbRegistryActor ? GetUsers)))
-        ))
+          postSession(authorize(hasValidAccess(user))(
+            entity(as[PaintRequest])(request =>
+              PaintRequestValidation.validate(request) map (errorCode =>
+                complete(errorCode)) getOrElse {
+                complete(dbRegistryActor ? GetUsers)
+              })),
+            path("history")(get(complete(dbRegistryActor ? GetUsers)))
+          ))
       )
     ))
 }

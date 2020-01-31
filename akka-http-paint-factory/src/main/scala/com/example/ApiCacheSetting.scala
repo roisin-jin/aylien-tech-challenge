@@ -15,8 +15,8 @@ object ApiCacheSetting {
     val lfuCacheSettings = defaultCachingSettings.lfuCacheSettings
       .withInitialCapacity(5)
       .withMaxCapacity(100)
-      .withTimeToLive(20 minutes)
-      .withTimeToIdle(10 minutes)
+      .withTimeToLive(20.minutes)
+      .withTimeToIdle(10.minutes)
 
     val cachingSettings = defaultCachingSettings.withLfuCacheSettings(lfuCacheSettings)
 
