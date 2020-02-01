@@ -1,6 +1,7 @@
 package com.example
 
 import akka.http.scaladsl.model.{ StatusCode, StatusCodes }
+import akka.http.scaladsl.server.{ Rejection, ValidationRejection }
 
 case class InternalRequest(colors: Int, customers: Int, demands: Seq[Seq[Int]]) {
   def getConvertedPaintRequest: PaintRequest = PaintRequest(colors, demands.iterator.map(d =>

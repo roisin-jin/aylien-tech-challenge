@@ -35,15 +35,15 @@ class PaintWsActor(implicit system: ActorSystem) extends Actor {
       val uri = Uri(PY_APP_URL + Uri./ + INDEX_PATH).withQuery(Query("input" -> input))
       http.singleRequest(HttpRequest(HttpMethods.GET, uri)) onComplete {
         case Success(resp) if resp.status == StatusCodes.OK =>
-          Unmarshal(resp.entity).to[String] recover { case e => requestSender ! e} map (msg => sender() ! msg)
+          Unmarshal(resp.entity).to[String] map (msg => requestSender ! msg) recover { case e => system.log.error(e.getMessage)}
         case _ =>
-          system.log.info("Paint request {} from user {} has failed", input, userId)
+          system.log.error("Paint request {} from user {} has failed", input, userId)
       }
     case Crash =>
       val uri = Uri(PY_APP_URL + Uri./ + CRASH_PATH)
       http.singleRequest(HttpRequest(HttpMethods.GET, uri)) onComplete {
         case Success(resp) if resp.status == StatusCodes.OK => sender() ! "The app has crashed"
-        case _ => system.log.info("Crash request has failed")
+        case _ => system.log.error("Crash request has failed")
       }
   }
 
