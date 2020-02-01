@@ -53,11 +53,9 @@ class DbRegistryActor(val dbConfig: DatabaseConfig)(implicit system: ActorSystem
           sender ! failure.getMessage
       }
     case CreateUserRequestRecord(apiUserRequestRecord) =>
-      apiUserRequestRecordDao.insertUserRequest(apiUserRequestRecord) onComplete {
-        case Success(_) => sender ! "SUCCESS"
+      apiUserRequestRecordDao.insertUserRequest(apiUserRequestRecord) andThen {
         case Failure(failure) =>
           log.error("Cannot add request record for user id {} - {}", apiUserRequestRecord.userId, failure)
-          sender ! failure.getMessage
       }
   }
 }

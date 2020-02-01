@@ -2,38 +2,33 @@ package com.example
 
 
 
-import akka.actor.testkit.typed.scaladsl.ActorTestKit
 import akka.http.scaladsl.marshalling.Marshal
-import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.{ ContentTypes, HttpRequest, MessageEntity, StatusCodes }
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import akka.testkit.TestKit
+import com.example.db.{ ApiUser, DbRegistryActor }
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ Matchers, WordSpec }
-import akka.actor.typed.scaladsl.adapter._
-import com.example.db.{ DbRegistryActor, TestDbConfig }
+import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpec }
 
 
-class PaintRoutesSpec extends WordSpec with Matchers with ScalaFutures with ScalatestRouteTest {
+class PaintRoutesSpec extends WordSpec with Matchers with BeforeAndAfterAll with ScalaFutures with ScalatestRouteTest {
 
+  import JsonFormats._
+  import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 
-  // the Akka HTTP route testkit does not yet support a typed actor system (https://github.com/akka/akka-http/issues/2036)
-  // so we have to adapt for now
-  lazy val testKit = ActorTestKit()
-  implicit def typedSystem = testKit.system
-  override def createActorSystem(): akka.actor.ActorSystem =
-    testKit.system.toClassic
+  implicit val executionConext = system.dispatcher
 
-  // Here we need to implement all the abstract members of UserRoutes.
-  // We use the real UserRegistryActor to test it while we hit the Routes,
-  // but we could "mock" it by implementing it in-place or by using a TestProbe
-  // created with testKit.createTestProbe()
-  val dbRegistry = testKit.spawn(new DbRegistryActor(TestDbConfig).register())
-  lazy val routes = new PaintRoutes(dbRegistry).routes
+  override def afterAll: Unit = {
+    TestKit.shutdownActorSystem(system)
+  }
+
+  val dbRegistry = system.actorOf(DbRegistryActor.props,"DbRegistryActor")
+  val paintWsActor = system.actorOf(PaintWsActor.props, "paintWsActor")
+  lazy val routes = new PaintRoutes(dbRegistry, paintWsActor).routes
 
   // use the json formats to marshal and unmarshall objects in the test
-  import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
-  import JsonFormats._
 
-  /*
+
   "UserRoutes" should {
     "return no users if no present (GET /users)" in {
       // note that there's no need for the host part in the uri:
@@ -53,7 +48,7 @@ class PaintRoutesSpec extends WordSpec with Matchers with ScalaFutures with Scal
 
 
     "be able to add users (POST /users)" in {
-      val user = User("Kapi", 42, "jp")
+      val user = ApiUser(None, "testAppId", "testAppKey", "test@email.com", None, false, false)
       val userEntity = Marshal(user).to[MessageEntity].futureValue // futureValue is from ScalaFutures
 
       // using the RequestBuilding DSL:
@@ -87,8 +82,6 @@ class PaintRoutesSpec extends WordSpec with Matchers with ScalaFutures with Scal
     }
 
   }
-*/
-
 
 }
 

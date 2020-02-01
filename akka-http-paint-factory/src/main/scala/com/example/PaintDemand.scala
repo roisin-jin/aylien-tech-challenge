@@ -23,6 +23,7 @@ object PaintRequestValidation {
 
   val defaultErrorMsg = "Oops theres something wrong with your request!"
 
+  // Customize error codes for request body validation
   val errorCodeTotalColors = StatusCodes.custom(460, "Total number of colors should be from 1 to 2000", defaultErrorMsg)
   val errorCodeTotalCustomers = StatusCodes.custom(461, "Total number of customers should not exceed 2000", defaultErrorMsg)
   val errorCodeTotalDemands = StatusCodes.custom(462, "Total number of demands should not exceed 3000", defaultErrorMsg)
@@ -30,6 +31,9 @@ object PaintRequestValidation {
   val errorCodeInvalidDemand: Set[Int] => StatusCode = customerIds => StatusCodes.custom(463,
     s"Paint color number ranges from 1 to 2000 while type can only be either 1 or 0, found errors in request from customers: ${customerIds.mkString(",")}",
     defaultErrorMsg)
+
+
+  val errorCodeNoSolution = StatusCodes.custom(465, "Impossible to find a solution for the requested input")
 
   // Business logic check on request sent from users
   // Paint colors range: 1 <= N <= 2000

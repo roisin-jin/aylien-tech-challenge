@@ -1,7 +1,6 @@
 package com.example
 
 import akka.actor.ActorSystem
-import akka.actor.typed.scaladsl.adapter._
 import akka.actor.{ Actor, Props }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.Uri.Query
@@ -14,7 +13,7 @@ import scala.util.Success
 
 object PaintWsActor {
 
-  case class Crash()
+  case object Crash
   def props: Props = Props[PaintWsActor]
 }
 
@@ -40,10 +39,10 @@ class PaintWsActor(implicit system: ActorSystem) extends Actor {
         case _ =>
           system.log.info("Paint request {} from user {} has failed", input, userId)
       }
-    case Crash() =>
+    case Crash =>
       val uri = Uri(PY_APP_URL + Uri./ + CRASH_PATH)
       http.singleRequest(HttpRequest(HttpMethods.GET, uri)) onComplete {
-        case Success("") => sender() ! "The app has crashed"
+        case Success(resp) if resp.status == StatusCodes.OK => sender() ! "The app has crashed"
         case _ => system.log.info("Crash request has failed")
       }
   }
