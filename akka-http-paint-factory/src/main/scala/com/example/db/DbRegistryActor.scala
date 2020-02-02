@@ -22,10 +22,10 @@ object DbRegistryActor {
 
 }
 
-class DbRegistryActor(val dbConfig: DatabaseConfig)(implicit system: ActorSystem) extends Actor with ActorLogging {
+class DbRegistryActor(dbConfig: DatabaseConfig) extends Actor with ActorLogging {
 
   import DbRegistryActor._
-  import system.dispatcher
+  import context.dispatcher
 
   val apiUserDao = new ApiUserDao(dbConfig)
   val apiUserRequestRecordDao = new ApiUserRequestRecordDao(dbConfig)

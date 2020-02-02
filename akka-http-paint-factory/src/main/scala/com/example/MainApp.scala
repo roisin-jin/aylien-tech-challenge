@@ -1,9 +1,9 @@
 package com.example
 
-import akka.actor.{ ActorRef, ActorSystem }
+import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
-import com.example.db.DbRegistryActor
+import com.example.db.{ DbRegistryActor, ProdDdConfig }
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, ExecutionContext }
@@ -14,9 +14,8 @@ object MainApp extends App {
   implicit val system: ActorSystem = ActorSystem("PaintApiServer-V2")
   implicit val executionContext: ExecutionContext = system.dispatcher
 
-  val dbRegistryActor: ActorRef = system.actorOf(DbRegistryActor.props,"DbRegistryActor")
-  val paintWsActor: ActorRef = system.actorOf(PaintWsActor.props, "paintWsActor")
-
+  val dbRegistryActor: ActorRef = system.actorOf(Props(new DbRegistryActor(ProdDdConfig)),"DbRegistryActor")
+  val paintWsActor: ActorRef = system.actorOf(Props(new PaintWsActor()), "PaintWsActor")
   val routes: Route = new PaintRoutes(dbRegistryActor, paintWsActor).routes
 
   Http().bindAndHandle(routes, "localhost", 9000) onComplete {
