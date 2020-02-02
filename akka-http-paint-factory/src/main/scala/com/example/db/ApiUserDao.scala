@@ -19,7 +19,7 @@ class ApiUserDao(val dbConfig: DatabaseConfig) extends BaseDao {
 
   def insertApiUser(apiUser: ApiUser): Future[Long] = table.returning(table.map(_.id)) += apiUser
 
-  def findAllActiveUsers: Future[Seq[ApiUser]] = table.filterNot(_.hasExpired).result
+  def findAllUsers: Future[Seq[ApiUser]] = table.sortBy(_.id.desc).result
 
   def findByAppIdAndKey(appId: String, appKey: String): Future[Option[ApiUser]] =
     table.filter(r => r.appId === appId && r.appKey === appKey).result.headOption

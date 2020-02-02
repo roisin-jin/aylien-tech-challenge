@@ -11,11 +11,12 @@ import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import akka.util.Timeout
 import com.example.PaintWsActor.Crash
-import com.example.db.DbRegistryActor.{ CreateUser, CreateUserRequestRecord, GetUser, GetUserResponse }
+import com.example.db.DbRegistryActor.{ CreateUser, CreateUserRequestRecord, GetAllUsers, GetUser, GetUserRequestRecords, GetUserRequestRecordsResponse, GetUserResponse }
 import com.example.db.{ ApiUser, ApiUserRequestRecord }
 import com.typesafe.config.Config
 
 import scala.concurrent.{ ExecutionContext, Future }
+import scala.util.Success
 
 class PaintRoutes(dbRegistryActor: ActorRef, paintWsActor: ActorRef)(implicit system: ActorSystem) extends Throttle {
 
@@ -39,9 +40,12 @@ class PaintRoutes(dbRegistryActor: ActorRef, paintWsActor: ActorRef)(implicit sy
 
   def apiUserAuthenticator(apiCreds: Option[ApiCredential]): Future[AuthenticationResult[ApiUser]] = apiCreds match {
     case Some(creds) => userCache.get(creds) getOrElse {
-      val authenticationResult = findUser(creds) map (_.user.map(Right(_)).getOrElse(Left(challenge)))
-      // Initate cache if it's the first time seeing user
-      userCache.put(creds, authenticationResult.mapTo[AuthenticationResult[ApiUser]])
+      val userResponse = findUser(creds)
+      val authenticationResult = userResponse map (_.users.headOption.map(Right(_)).getOrElse(Left(challenge)))
+      // Initiate cache if it's the first time seeing user if there's no error
+      userResponse andThen {
+        case Success(GetUserResponse(_, "SUCCESS")) => userCache.put(creds, authenticationResult.mapTo[AuthenticationResult[ApiUser]])
+      }
       authenticationResult
     }
     case None => Future(Left(challenge))
@@ -86,11 +90,24 @@ class PaintRoutes(dbRegistryActor: ActorRef, paintWsActor: ActorRef)(implicit sy
                   case _ => complete((StatusCodes.OK, result))
                 })
               }))),
-          path("history")(get(complete(StatusCodes.OK)))
+          path("history")(get(parameterMap { params =>
+            val size = params.getOrElse("pageSize", "50")
+            val offSet = params.getOrElse("offSet", "0")
+            val getHistoryRequest = GetUserRequestRecords(user.id.get, size.toInt, offSet.toInt)
+            val response = (dbRegistryActor ? getHistoryRequest).mapTo[GetUserRequestRecordsResponse]
+            onSuccess(response)(result => complete((StatusCodes.OK, result.records)))
+          }))
         )),
       path("admin")(authorize(isSuperUser(user))(
         concat(
           path("crash")(onSuccess((paintWsActor ? Crash).mapTo[String])(msg => complete((StatusCodes.OK, msg)))),
+          path("users")(get {
+            val getUsers = (dbRegistryActor ? GetAllUsers).mapTo[GetUserResponse]
+            onSuccess(getUsers) { resp =>
+              val status = if (resp.message == "SUCCESS") StatusCodes.OK else StatusCodes.InternalServerError
+              complete((status, resp))
+            }
+          }),
           path("user")(postSession(entity(as[ApiUser]) { newApiUser =>
             val createUserResponse = (dbRegistryActor ? CreateUser(newApiUser)).mapTo[String]
             onSuccess(createUserResponse)(msg => msg match {

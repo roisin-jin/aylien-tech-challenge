@@ -16,7 +16,7 @@ class ApiUserDaoTest extends FunSuite with Matchers with ScalaFutures {
   }
 
   test("testFindAllActiveUsers") {
-    whenReady(testInstance.findAllActiveUsers) { allUsers =>
+    whenReady(testInstance.findAllUsers) { allUsers =>
       allUsers.isEmpty should ===(true)
     }
   }
