@@ -6,7 +6,7 @@ import org.scalatest.{ FunSuite, Matchers }
 class ApiUserDaoTest extends FunSuite with Matchers with ScalaFutures {
 
   val testInstance = new ApiUserDao(TestDbConfig)
-  val testUser = ApiUser(None, "testAppId", "testappKey", "test@email.com", None, true, false)
+  val testUser = ApiUser(None, "testAppId", "testappKey", "test@email.com", true, false)
 
   test("testInsertApiUser") {
 

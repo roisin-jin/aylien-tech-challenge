@@ -17,7 +17,7 @@ import com.typesafe.config.Config
 
 import scala.concurrent.{ ExecutionContext, Future }
 
-class PaintRoutes(dbRegistryActor: ActorRef, paintWsActor: ActorRef)(implicit system: ActorSystem) {
+class PaintRoutes(dbRegistryActor: ActorRef, paintWsActor: ActorRef)(implicit system: ActorSystem) extends Throttle {
 
   import JsonFormats._
   import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
@@ -26,7 +26,8 @@ class PaintRoutes(dbRegistryActor: ActorRef, paintWsActor: ActorRef)(implicit sy
   implicit val executionContext: ExecutionContext = system.dispatcher
   // If ask takes more time than this to complete the request is failed
   private implicit val timeout = Timeout.create(system.settings.config.getDuration("main-app.routes.ask-timeout"))
-  private val superUser: Config = system.settings.config.getConfig("superUser")
+  private val maxRequestsPerSecond = system.settings.config.getInt("main-app.rate-limit.requests-per-second")
+  private val superUser: Config = system.settings.config.getConfig("main-app.superUser")
 
   val challenge = HttpChallenges.basic("paintFactory")
 
@@ -58,9 +59,11 @@ class PaintRoutes(dbRegistryActor: ActorRef, paintWsActor: ActorRef)(implicit sy
   def isSuperUser(user: ApiUser): Boolean = user.appId == superUser.getString("appId") && user.appKey == superUser.getString("appKey")
 
   val postSession = pathEnd & post
+  // Create rate limit throttler
+  val requestedWithinRate = throttle(maxRequestsPerSecond)
 
   val routes: Route = ApiSecurityDirectives.apiAuthenticateOrRejectWithChallenge(apiUserAuthenticator _)(user =>
-    concat(
+    requestedWithinRate(concat(
       pathPrefix("v1")(authorize(user.hasV1Access)(
         parameters("input")(input => get {
           val paintRequest = input.parseJson.convertTo[InternalRequest].getConvertedPaintRequest
@@ -97,5 +100,5 @@ class PaintRoutes(dbRegistryActor: ActorRef, paintWsActor: ActorRef)(implicit sy
           }))
         )
       ))
-    ))
+    )))
 }
