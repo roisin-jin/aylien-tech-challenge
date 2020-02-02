@@ -48,7 +48,7 @@ class PaintRoutesSpec extends WordSpec with Matchers with BeforeAndAfterAll with
 
 
     "be able to add users (POST /users)" in {
-      val user = ApiUser(None, "testAppId", "testAppKey", "test@email.com", None, false, false)
+      val user = ApiUser(0, "testAppId", "testAppKey", "test@email.com", false, false)
       val userEntity = Marshal(user).to[MessageEntity].futureValue // futureValue is from ScalaFutures
 
       // using the RequestBuilding DSL:

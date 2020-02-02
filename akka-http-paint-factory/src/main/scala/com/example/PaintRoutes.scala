@@ -53,7 +53,7 @@ class PaintRoutes(dbRegistryActor: ActorRef, paintWsActor: ActorRef)(implicit sy
 
   def processPaintRequest(user: ApiUser, inputJsonStr: String): Future[String] = {
     val requestTime = ZonedDateTime.now.withZoneSameInstant(ZoneId.of("UTC")).toInstant.toEpochMilli
-    val apiUserRequestRecord = ApiUserRequestRecord(None, user.id.get, inputJsonStr, requestTime)
+    val apiUserRequestRecord = ApiUserRequestRecord(0, user.id, inputJsonStr, requestTime)
 
     // Persist user request before sending request to the paintWs
     dbRegistryActor ? CreateUserRequestRecord(apiUserRequestRecord)
@@ -93,7 +93,7 @@ class PaintRoutes(dbRegistryActor: ActorRef, paintWsActor: ActorRef)(implicit sy
           path("history")(get(parameterMap { params =>
             val size = params.getOrElse("pageSize", "50")
             val offSet = params.getOrElse("offSet", "0")
-            val getHistoryRequest = GetUserRequestRecords(user.id.get, size.toInt, offSet.toInt)
+            val getHistoryRequest = GetUserRequestRecords(user.id, size.toInt, offSet.toInt)
             val response = (dbRegistryActor ? getHistoryRequest).mapTo[GetUserRequestRecordsResponse]
             onSuccess(response)(result => complete((StatusCodes.OK, result.records)))
           }))

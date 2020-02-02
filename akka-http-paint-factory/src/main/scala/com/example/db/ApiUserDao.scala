@@ -4,38 +4,46 @@ import slick.jdbc.MySQLProfile.api._
 import slick.sql.SqlAction
 
 import scala.concurrent.Future
+import ApiTable._
+import com.typesafe.scalalogging.LazyLogging
 
-trait BaseDao {
+trait BaseDao extends LazyLogging {
 
   val dbConfig: DatabaseConfig
 
-  protected implicit def executeFromDb[A](action: SqlAction[A, NoStream, _ <: slick.dbio.Effect]): Future[A] = dbConfig.db.run(action)
+  protected implicit def executeFromDb[A](action: SqlAction[A, NoStream, _ <: slick.dbio.Effect]): Future[A] = {
+    dbConfig.db.run(action)
+  }
 
+}
+
+object ApiTable {
+  val apiUsertable = TableQuery[ApiUserTable]
+  val apiUserRequestRecordtable = TableQuery[ApiUserRequestRecordTable]
 }
 
 class ApiUserDao(val dbConfig: DatabaseConfig) extends BaseDao {
 
-  val table = TableQuery[ApiUserTable]
+  def insertApiUser(apiUser: ApiUser): Future[Long] = {
+    logger.info("Create api user {}", apiUser.email)
+    apiUsertable.returning(apiUsertable.map(_.id)) += apiUser
+  }
 
-  def insertApiUser(apiUser: ApiUser): Future[Long] = table.returning(table.map(_.id)) += apiUser
-
-  def findAllUsers: Future[Seq[ApiUser]] = table.sortBy(_.id.desc).result
+  def findAllUsers: Future[Seq[ApiUser]] = apiUsertable.sortBy(_.id.desc).result
 
   def findByAppIdAndKey(appId: String, appKey: String): Future[Option[ApiUser]] =
-    table.filter(r => r.appId === appId && r.appKey === appKey).result.headOption
+    apiUsertable.filter(r => r.appId === appId && r.appKey === appKey).result.headOption
 }
 
 class ApiUserRequestRecordDao(val dbConfig: DatabaseConfig) extends BaseDao {
 
-  val table = TableQuery[ApiUserRequestRecordTable]
-
   def insertUserRequest(apiUserRequestsHistory: ApiUserRequestRecord): Future[Long] = {
-    table.returning(table.map(_.id)) += apiUserRequestsHistory
+    apiUserRequestRecordtable.returning(apiUserRequestRecordtable.map(_.id)) += apiUserRequestsHistory
   }
 
   // Order by requested time descending
   def findUserRequestsHistory(userId: Long, size: Int, offset: Int): Future[Seq[ApiUserRequestRecord]] = {
-    table.filter(_.userId === userId).sortBy(_.requestedTime.desc).drop(offset).take(size).result
+    apiUserRequestRecordtable.filter(_.userId === userId).sortBy(_.requestedTime.desc).drop(offset).take(size).result
   }
 
 }
