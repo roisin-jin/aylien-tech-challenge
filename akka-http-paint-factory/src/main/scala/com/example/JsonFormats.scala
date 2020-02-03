@@ -21,8 +21,6 @@ object JsonFormats extends DefaultJsonProtocol  {
     }
   }
 
-  // import the default encoders for primitive types (Int, String, Lists etc)
-
   implicit val apiUserJsonFormat = jsonFormat7(ApiUser)
   implicit val apiUserRequestRecordJsonFormat = jsonFormat4(ApiUserRequestRecord)
   implicit val getUsersResponseJsonFormat = jsonFormat2(GetUserResponse)
@@ -31,5 +29,7 @@ object JsonFormats extends DefaultJsonProtocol  {
   implicit val paintDemandsJsonFormat = jsonFormat2(PaintDemands)
   implicit val paintRequestJsonFormat = jsonFormat2(PaintRequest)
   implicit val internalRequestJsonFormat = jsonFormat3(InternalRequest)
+
+  implicit val paintResponseJsonFormat = jsonFormat1(PaintResponse)
 }
 

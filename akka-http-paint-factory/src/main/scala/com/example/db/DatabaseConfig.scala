@@ -1,6 +1,6 @@
 package com.example.db
 
-import com.typesafe.config.{ Config, ConfigFactory }
+import com.typesafe.config.{Config, ConfigFactory}
 import slick.jdbc.JdbcProfile
 import slick.sql.SqlAction
 
@@ -8,11 +8,10 @@ import scala.concurrent.Future
 
 trait DatabaseConfig {
 
-  val config: Config
+  val config: Config = ConfigFactory.load()
 
   //Get configurations key vales for database
-  private lazy val databaseConfig = config.getConfig("database")
-
+  lazy val databaseConfig = config.getConfig("database")
   lazy val databaseUrl = databaseConfig.getString("url")
   lazy val databaseUser = databaseConfig.getString("user")
   lazy val databasePassword = databaseConfig.getString("password")
@@ -28,8 +27,6 @@ trait DatabaseConfig {
 
 trait ProdDdConfig extends DatabaseConfig {
 
-  //set's up ConfigFactory to read from application.conf
-  override val config = ConfigFactory.load()
-  override val profile =  slick.jdbc.MySQLProfile
+  override val profile: JdbcProfile =  slick.jdbc.MySQLProfile
 
 }

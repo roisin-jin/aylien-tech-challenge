@@ -1,22 +1,22 @@
 package com.example
 
 import java.sql.Timestamp
-import java.time.{ ZoneId, ZonedDateTime }
+import java.time.{ZoneId, ZonedDateTime}
 
-import akka.actor.{ ActorRef, ActorSystem }
+import akka.actor.{ActorRef, ActorSystem}
 import akka.http.caching.scaladsl.CachingSettings
-import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.model.headers.HttpChallenges
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import akka.util.Timeout
 import com.example.PaintWsActor.Crash
-import com.example.db.{ ApiUser, ApiUserRequestRecord }
 import com.example.db.DbRegistryActor._
+import com.example.db.{ApiUser, ApiUserRequestRecord}
 import com.typesafe.config.Config
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Success
 
 class PaintRoutes(dbRegistryActor: ActorRef, paintWsActor: ActorRef)(implicit system: ActorSystem) extends Throttle {
@@ -61,7 +61,8 @@ class PaintRoutes(dbRegistryActor: ActorRef, paintWsActor: ActorRef)(implicit sy
     (paintWsActor ? apiUserRequestRecord).mapTo[String]
   }
 
-  def isSuperUser(user: ApiUser): Boolean = user.appId == superUser.getString("appId") && user.appKey == superUser.getString("appKey")
+  val isSuperUser: ApiUser => Boolean = user =>
+    user.appId == superUser.getString("appId") && user.appKey == superUser.getString("appKey")
 
   val postSession = pathEnd & post
   // Create rate limit throttler
@@ -73,12 +74,11 @@ class PaintRoutes(dbRegistryActor: ActorRef, paintWsActor: ActorRef)(implicit sy
         parameters("input")(input => get {
           val paintRequest = input.parseJson.convertTo[InternalRequest].getConvertedPaintRequest
           //Validate request format before further processing
-          PaintRequestValidation.validate(paintRequest) map (errorCode => complete(errorCode)) getOrElse {
-            onSuccess(processPaintRequest(user, input))(result => result match {
-              case "IMPOSSIBLE" => complete(PaintRequestValidation.errorCodeNoSolution)
-              case _ => complete((StatusCodes.OK, result))
-            })
-          }
+          PaintRequestValidation.validate(paintRequest) map (errorCode =>
+            complete(errorCode)) getOrElse onSuccess(processPaintRequest(user, input))(result => result match {
+            case "IMPOSSIBLE" => complete(PaintRequestValidation.errorCodeNoSolution)
+            case _ => complete(HttpResponse(entity = result, status = StatusCodes.OK))
+          })
         }))),
       pathPrefix("v2")(
         concat(
@@ -88,7 +88,13 @@ class PaintRoutes(dbRegistryActor: ActorRef, paintWsActor: ActorRef)(implicit sy
                 val paintRequest = request.getConvertedInternalRequest.toJson.compactPrint
                 onSuccess(processPaintRequest(user, paintRequest))(result => result match {
                   case "IMPOSSIBLE" => complete(PaintRequestValidation.errorCodeNoSolution)
-                  case _ => complete((StatusCodes.OK, result))
+                  case _ => {
+                    //parse response from python app
+                    val results = result.split(" ")
+                    val solutions: Seq[PaintDemand] = (1 to results.size) map (color => PaintDemand(color, results(color).toInt))
+                    val responseEntity = HttpEntity(contentType = ContentTypes.`application/json`, string = PaintResponse(solutions).toJson.prettyPrint)
+                    complete(HttpResponse(entity = responseEntity, status = StatusCodes.OK))
+                  }
                 })
               }))),
           path("history")(get(parameterMap { params =>

@@ -30,13 +30,14 @@ class ApiUserDaoTest extends TestKit(ActorSystem("test-system"))
 
   it should "retrieve a user by app id and app key" in {
     whenReady(testInstance.findByAppIdAndKey(testUser.appId, testUser.appKey)) { user =>
-      user should ===(Some(testUser))
+      user.isDefined should ===(true)
+      user should ===(Some(testUser.copy(id = user.get.id)))
     }
   }
 
   it should "find all users" in {
     whenReady(testInstance.findAllUsers) { allUsers =>
-      allUsers.isEmpty should ===(true)
+      allUsers.filterNot(_.hasExpired).isEmpty should ===(true)
     }
   }
 }

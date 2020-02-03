@@ -20,6 +20,8 @@ final case class PaintRequest(totalColors: Int, customerDemands: Seq[PaintDemand
   }
 }
 
+final case class PaintResponse(solutions: Seq[PaintDemand])
+
 object PaintRequestValidation {
 
   val defaultErrorMsg = "Oops theres something wrong with your request!"

@@ -15,7 +15,7 @@ trait Entity {
 /**
   * The repo definition which should be used within an entity repo
   */
-trait TableDefinition {this: DatabaseConfig =>
+trait TableDefinition { self: DatabaseConfig =>
 
   import profile.api._
 
@@ -31,7 +31,7 @@ trait TableDefinition {this: DatabaseConfig =>
 
 }
 
-trait BaseComponent extends TableDefinition { this: DatabaseConfig =>
+trait BaseComponent extends TableDefinition { self: DatabaseConfig =>
 
   import profile.api._
 

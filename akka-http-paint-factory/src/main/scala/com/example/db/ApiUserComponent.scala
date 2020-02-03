@@ -9,7 +9,7 @@ case class ApiUser(id: Long, appId: String, appKey: String, email: String,
   def hasValidAccess: Boolean = !hasExpired
 }
 
-trait ApiUserTableDefinition extends TableDefinition { this: DatabaseConfig =>
+trait ApiUserTableDefinition extends TableDefinition { self: DatabaseConfig =>
 
   import profile.api._
 
@@ -29,7 +29,7 @@ trait ApiUserTableDefinition extends TableDefinition { this: DatabaseConfig =>
   val apiUsersTable = TableQuery[ApiUserTable]
 }
 
-trait ApiUserComponent extends BaseComponent with ApiUserTableDefinition { this: DatabaseConfig =>
+trait ApiUserComponent extends BaseComponent with ApiUserTableDefinition { self: DatabaseConfig =>
 
   import profile.api._
 

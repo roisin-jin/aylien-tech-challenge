@@ -6,7 +6,7 @@ import scala.concurrent.{ ExecutionContext, Future }
 
 case class ApiUserRequestRecord(id: Long, userId: Long, requestInput: String, createdAt: Timestamp) extends Entity
 
-trait ApiUserRequestRecordComponent extends BaseComponent with ApiUserTableDefinition { this: DatabaseConfig =>
+trait ApiUserRequestRecordComponent extends BaseComponent with ApiUserTableDefinition { self: DatabaseConfig =>
 
   import profile.api._
 
