@@ -2,9 +2,9 @@ package com.example.db
 
 import com.typesafe.config.ConfigFactory
 
-object TestDbConfig extends DatabaseConfig {
+trait TestDbConfig extends DatabaseConfig {
 
   override val config = ConfigFactory.load("dev")
-  override val driver =  slick.jdbc.H2Profile
+  override val profile =  slick.jdbc.H2Profile
 
 }

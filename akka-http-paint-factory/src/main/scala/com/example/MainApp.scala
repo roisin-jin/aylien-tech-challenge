@@ -7,7 +7,8 @@ import javax.net.ssl.{ KeyManagerFactory, SSLContext, TrustManagerFactory }
 import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.http.scaladsl.{ ConnectionContext, Http, HttpsConnectionContext }
 import akka.http.scaladsl.server.Route
-import com.example.db.{ DbRegistryActor, ProdDdConfig }
+import com.example.db.{ ApiUser, DbRegistryActor, ProdDbRegistryActor, ProdDdConfig }
+import com.typesafe.config.Config
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ Await, ExecutionContext }
@@ -18,7 +19,7 @@ object MainApp extends App {
   implicit val system: ActorSystem = ActorSystem("PaintApiServer-V2")
   implicit val executionContext: ExecutionContext = system.dispatcher
 
-  val dbRegistryActor: ActorRef = system.actorOf(Props(new DbRegistryActor(ProdDdConfig)),"DbRegistryActor")
+  val dbRegistryActor: ActorRef = system.actorOf(Props(ProdDbRegistryActor),"DbRegistryActor")
   val paintWsActor: ActorRef = system.actorOf(Props(new PaintWsActor()), "PaintWsActor")
   val routes: Route = new PaintRoutes(dbRegistryActor, paintWsActor).routes
 

@@ -1,9 +1,11 @@
 package com.example.db
 
-import akka.actor.{ Actor, ActorLogging, ActorSystem, Props }
+import akka.actor.{ Actor, ActorLogging }
 import com.example.ApiCredential
 
 import scala.util.{ Failure, Success }
+
+object ProdDbRegistryActor extends DbRegistryActor with ProdDdConfig {}
 
 object DbRegistryActor {
 
@@ -17,18 +19,16 @@ object DbRegistryActor {
   final case class CreateUser(apiUser: ApiUser)
 
   final case class CreateUserRequestRecord(apiUserRequestRecord: ApiUserRequestRecord)
-
-  def props: Props = Props[DbRegistryActor]
-
 }
 
-class DbRegistryActor(dbConfig: DatabaseConfig) extends Actor with ActorLogging {
+trait DbRegistryActor extends Actor with ActorLogging with DatabaseConfig
+  with ApiUserComponent with ApiUserRequestRecordComponent {
 
   import DbRegistryActor._
   import context.dispatcher
 
-  val apiUserDao = new ApiUserDao(dbConfig)
-  val apiUserRequestRecordDao = new ApiUserRequestRecordDao(dbConfig)
+  val apiUserDao = new ApiUserDao()
+  val apiUserRequestRecordDao = new ApiUserRequestRecordDao()
 
   //Registering the Actor
   def receive: Receive = {

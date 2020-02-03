@@ -2,14 +2,19 @@ package com.example
 
 
 
+import java.sql.Timestamp
+import java.time.Instant
+
+import akka.actor.Props
 import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model.{ ContentTypes, HttpRequest, MessageEntity, StatusCodes }
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.testkit.TestKit
-import com.example.db.{ ApiUser, DbRegistryActor }
+import com.example.db.{ ApiUser, DbRegistryActor, TestDbConfig }
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{ BeforeAndAfterAll, Matchers, WordSpec }
 
+object TestDbRegistryActor extends DbRegistryActor with TestDbConfig {}
 
 class PaintRoutesSpec extends WordSpec with Matchers with BeforeAndAfterAll with ScalaFutures with ScalatestRouteTest {
 
@@ -22,9 +27,9 @@ class PaintRoutesSpec extends WordSpec with Matchers with BeforeAndAfterAll with
     TestKit.shutdownActorSystem(system)
   }
 
-  val dbRegistry = system.actorOf(DbRegistryActor.props,"DbRegistryActor")
+  val testDbRegistry = system.actorOf(Props(TestDbRegistryActor),"TestDbRegistryActor")
   val paintWsActor = system.actorOf(PaintWsActor.props, "paintWsActor")
-  lazy val routes = new PaintRoutes(dbRegistry, paintWsActor).routes
+  lazy val routes = new PaintRoutes(testDbRegistry, paintWsActor).routes
 
   // use the json formats to marshal and unmarshall objects in the test
 
@@ -48,7 +53,7 @@ class PaintRoutesSpec extends WordSpec with Matchers with BeforeAndAfterAll with
 
 
     "be able to add users (POST /users)" in {
-      val user = ApiUser(0, "testAppId", "testAppKey", "test@email.com", false, false)
+      val user = ApiUser(0, "testAppId", "testAppKey", "test@email.com", false, false, Timestamp.from(Instant.now()))
       val userEntity = Marshal(user).to[MessageEntity].futureValue // futureValue is from ScalaFutures
 
       // using the RequestBuilding DSL:

@@ -1,5 +1,6 @@
 package com.example
 
+import java.sql.Timestamp
 import java.time.{ ZoneId, ZonedDateTime }
 
 import akka.actor.{ ActorRef, ActorSystem }
@@ -11,8 +12,8 @@ import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import akka.util.Timeout
 import com.example.PaintWsActor.Crash
-import com.example.db.DbRegistryActor.{ CreateUser, CreateUserRequestRecord, GetAllUsers, GetUser, GetUserRequestRecords, GetUserRequestRecordsResponse, GetUserResponse }
 import com.example.db.{ ApiUser, ApiUserRequestRecord }
+import com.example.db.DbRegistryActor._
 import com.typesafe.config.Config
 
 import scala.concurrent.{ ExecutionContext, Future }
@@ -52,8 +53,8 @@ class PaintRoutes(dbRegistryActor: ActorRef, paintWsActor: ActorRef)(implicit sy
   }
 
   def processPaintRequest(user: ApiUser, inputJsonStr: String): Future[String] = {
-    val requestTime = ZonedDateTime.now.withZoneSameInstant(ZoneId.of("UTC")).toInstant.toEpochMilli
-    val apiUserRequestRecord = ApiUserRequestRecord(0, user.id, inputJsonStr, requestTime)
+    val requestTime = ZonedDateTime.now.withZoneSameInstant(ZoneId.of("UTC")).toInstant
+    val apiUserRequestRecord = ApiUserRequestRecord(0, user.id, inputJsonStr, Timestamp.from(requestTime))
 
     // Persist user request before sending request to the paintWs
     dbRegistryActor ? CreateUserRequestRecord(apiUserRequestRecord)
