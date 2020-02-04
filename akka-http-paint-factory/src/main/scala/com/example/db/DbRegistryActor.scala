@@ -1,9 +1,9 @@
 package com.example.db
 
-import akka.actor.{ Actor, ActorLogging }
-import com.example.ApiCredential
+import akka.actor.{Actor, ActorLogging}
+import com.example.util.ApiCredential
 
-import scala.util.{ Failure, Success }
+import scala.util.{Failure, Success}
 
 object ProdDbRegistryActor extends DbRegistryActor with ProdDdConfig {}
 

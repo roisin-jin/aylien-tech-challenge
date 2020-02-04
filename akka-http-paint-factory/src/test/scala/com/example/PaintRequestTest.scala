@@ -2,7 +2,8 @@ package com.example
 
 import org.scalatest.FunSuite
 import spray.json._
-import JsonFormats._
+import com.example.util.JsonFormats._
+import com.example.util.{PaintDemand, PaintDemands, PaintRequest, PaintRequestValidater}
 
 class PaintRequestTest extends FunSuite {
 
@@ -14,11 +15,11 @@ class PaintRequestTest extends FunSuite {
 
   test("invalid total colors") {
     val paintRequests = PaintRequest(2003, Seq(PaintDemands(1, Seq(PaintDemand(1, 1))), PaintDemands(2, Seq(PaintDemand(1, 0)))))
-    assertResult(Some(PaintRequestValidation.errorCodeTotalColors))(PaintRequestValidation.validate(paintRequests))
+    assertResult(Some(PaintRequestValidater.errorCodeTotalColors))(PaintRequestValidater.validate(paintRequests))
   }
 
   test("invalid paint demand") {
     val paintRequests = PaintRequest(2, Seq(PaintDemands(1, Seq(PaintDemand(1, 3))), PaintDemands(2, Seq(PaintDemand(2, 0)))))
-    assertResult(Some(PaintRequestValidation.errorCodeInvalidDemand(Set(1))))(PaintRequestValidation.validate(paintRequests))
+    assertResult(Some(PaintRequestValidater.errorCodeInvalidDemand(Set(1))))(PaintRequestValidater.validate(paintRequests))
   }
 }

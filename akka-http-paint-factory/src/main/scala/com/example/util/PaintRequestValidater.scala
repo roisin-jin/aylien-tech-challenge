@@ -1,7 +1,6 @@
-package com.example
+package com.example.util
 
-import akka.http.scaladsl.model.{ StatusCode, StatusCodes }
-import akka.http.scaladsl.server.{ Rejection, ValidationRejection }
+import akka.http.scaladsl.model.{StatusCode, StatusCodes}
 
 case class InternalRequest(colors: Int, customers: Int, demands: Seq[Seq[Int]]) {
   def getConvertedPaintRequest: PaintRequest = PaintRequest(colors, demands.iterator.map(d =>
@@ -22,7 +21,7 @@ final case class PaintRequest(totalColors: Int, customerDemands: Seq[PaintDemand
 
 final case class PaintResponse(solutions: Seq[PaintDemand])
 
-object PaintRequestValidation {
+object PaintRequestValidater {
 
   val defaultErrorMsg = "Oops theres something wrong with your request!"
 

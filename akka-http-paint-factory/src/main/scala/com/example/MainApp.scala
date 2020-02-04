@@ -21,7 +21,7 @@ object MainApp extends App {
 
   val dbRegistryActor: ActorRef = system.actorOf(Props(ProdDbRegistryActor),"DbRegistryActor")
   val paintWsActor: ActorRef = system.actorOf(Props(new PaintWsActor()), "PaintWsActor")
-  val routes: Route = new PaintRoutes(dbRegistryActor, paintWsActor).routes
+  val routes: Route = new PaintRoutes(dbRegistryActor, paintWsActor).rootRoutes
 
   // Set up HTTPS support for api credentials
   val secret = system.settings.config.getString("main-app.https.secret").toCharArray

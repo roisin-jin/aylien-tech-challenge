@@ -9,20 +9,23 @@ import akka.http.scaladsl.model.headers.HttpChallenges
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.directives.CachingDirectives._
 import akka.pattern.ask
 import akka.util.Timeout
 import com.example.PaintWsActor.Crash
 import com.example.db.DbRegistryActor._
 import com.example.db.{ApiUser, ApiUserRequestRecord}
+import com.example.util._
 import com.typesafe.config.Config
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Success
 
-class PaintRoutes(dbRegistryActor: ActorRef, paintWsActor: ActorRef)(implicit system: ActorSystem) extends Throttle {
+class PaintRoutes(dbRegistryActor: ActorRef, paintWsActor: ActorRef)(implicit system: ActorSystem) {
 
-  import JsonFormats._
   import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
+  import com.example.util.CustomizedDirectives._
+  import com.example.util.JsonFormats._
   import spray.json._
 
   implicit val executionContext: ExecutionContext = system.dispatcher
@@ -61,73 +64,73 @@ class PaintRoutes(dbRegistryActor: ActorRef, paintWsActor: ActorRef)(implicit sy
     (paintWsActor ? apiUserRequestRecord).mapTo[String]
   }
 
-  val isSuperUser: ApiUser => Boolean = user =>
-    user.appId == superUser.getString("appId") && user.appKey == superUser.getString("appKey")
-
-  val postSession = pathEnd & post
   // Create rate limit throttler
   val requestedWithinRate = throttle(maxRequestsPerSecond)
+  val rootRoutes: Route = apiAuthenticateOrRejectWithChallenge(apiUserAuthenticator _)(user => concat(
+    v1Routes(user),
+    requestedWithinRate(v2Routes(user)),
+    adminRoutes(user)))
 
-  val routes: Route = ApiSecurityDirectives.apiAuthenticateOrRejectWithChallenge(apiUserAuthenticator _)(user =>
-    requestedWithinRate(concat(
-      pathPrefix("v1")(authorize(user.hasV1Access)(
-        parameters("input")(input => get {
-          val paintRequest = input.parseJson.convertTo[InternalRequest].getConvertedPaintRequest
-          //Validate request format before further processing
-          PaintRequestValidation.validate(paintRequest) map (errorCode =>
-            complete(errorCode)) getOrElse onSuccess(processPaintRequest(user, input))(result => result match {
-            case "IMPOSSIBLE" => complete(PaintRequestValidation.errorCodeNoSolution)
-            case _ => complete(HttpResponse(entity = result, status = StatusCodes.OK))
-          })
-        }))),
-      pathPrefix("v2")(
-        concat(
-          postSession(authorize(user.hasValidAccess)(
-            entity(as[PaintRequest])(request =>
-              PaintRequestValidation.validate(request) map (errorCode => complete(errorCode)) getOrElse {
-                val paintRequest = request.getConvertedInternalRequest.toJson.compactPrint
-                onSuccess(processPaintRequest(user, paintRequest))(result => result match {
-                  case "IMPOSSIBLE" => complete(PaintRequestValidation.errorCodeNoSolution)
-                  case _ => {
-                    //parse response from python app
-                    val results = result.split(" ")
-                    val solutions: Seq[PaintDemand] = (1 to results.size) map (color => PaintDemand(color, results(color).toInt))
-                    val responseEntity = HttpEntity(contentType = ContentTypes.`application/json`, string = PaintResponse(solutions).toJson.prettyPrint)
-                    complete(HttpResponse(entity = responseEntity, status = StatusCodes.OK))
-                  }
-                })
-              }))),
-          path("history")(get(parameterMap { params =>
-            val size = params.getOrElse("pageSize", "50")
-            val offSet = params.getOrElse("offSet", "0")
-            val getHistoryRequest = GetUserRequestRecords(user.id, size.toInt, offSet.toInt)
-            val response = (dbRegistryActor ? getHistoryRequest).mapTo[GetUserRequestRecordsResponse]
-            onSuccess(response)(result => complete((StatusCodes.OK, result.records)))
-          }))
-        )),
-      path("admin")(authorize(isSuperUser(user))(
-        concat(
-          path("crash") {
-            paintWsActor ! Crash
-            complete((StatusCodes.OK, "Crash event created"))
-          },
-          path("users")(get {
-            val getUsers = (dbRegistryActor ? GetAllUsers).mapTo[GetUserResponse]
-            onSuccess(getUsers) { resp =>
-              if (resp.message == "SUCCESS") {
-                val responseEntity = HttpEntity(contentType = ContentTypes.`application/json`, string = resp.toJson.prettyPrint)
-                complete(HttpResponse(entity = responseEntity, status = StatusCodes.OK))
-              } else complete(StatusCodes.InternalServerError)
+  val v1Routes: ApiUser => Route = user => pathPrefix("v1")(authorize(user.hasV1Access)(
+    parameters("input")(input => cache(wsCache, _ => input)(requestedWithinRate(get {
+      val paintRequest = input.parseJson.convertTo[InternalRequest].getConvertedPaintRequest
+      //Validate request format before further processing
+      PaintRequestValidater.validate(paintRequest) map (errorCode =>
+        complete(errorCode)) getOrElse onSuccess(processPaintRequest(user, input))(result => result match {
+        case "IMPOSSIBLE" => complete(PaintRequestValidater.errorCodeNoSolution)
+        case _ => complete(HttpResponse(entity = result, status = StatusCodes.OK))
+      })
+    })))
+  ))
+
+  val postSession = pathEnd & post
+  val v2Routes: ApiUser => Route = user => concat(
+    postSession(authorize(user.hasValidAccess)(
+      entity(as[PaintRequest])(request =>
+        PaintRequestValidater.validate(request) map (errorCode => complete(errorCode)) getOrElse {
+          val input = request.getConvertedInternalRequest.toJson.compactPrint
+          cache(wsCache, _ => input)(onSuccess(processPaintRequest(user, input))(result => result match {
+            case "IMPOSSIBLE" => complete(PaintRequestValidater.errorCodeNoSolution)
+            case _ => {
+              //parse response from python app
+              val results = result.split(" ")
+              val solutions: Seq[PaintDemand] = (1 to results.size) map (color => PaintDemand(color, results(color).toInt))
+              val responseEntity = HttpEntity(contentType = ContentTypes.`application/json`, string = PaintResponse(solutions).toJson.prettyPrint)
+              complete(HttpResponse(entity = responseEntity, status = StatusCodes.OK))
             }
-          }),
-          path("user")(postSession(entity(as[ApiUser]) { newApiUser =>
-            val createUserResponse = (dbRegistryActor ? CreateUser(newApiUser)).mapTo[String]
-            onSuccess(createUserResponse)(msg => msg match {
-              case "SUCCESS" => complete(StatusCodes.Created)
-              case _ => complete((StatusCodes.BadRequest, msg))
-            })
           }))
-        )
-      ))
-    )))
+        }))),
+    path("history")(get(parameterMap { params =>
+      val size = params.getOrElse("pageSize", "50")
+      val offSet = params.getOrElse("offSet", "0")
+      val getHistoryRequest = GetUserRequestRecords(user.id, size.toInt, offSet.toInt)
+      val response = (dbRegistryActor ? getHistoryRequest).mapTo[GetUserRequestRecordsResponse]
+      onSuccess(response)(result => complete((StatusCodes.OK, result.records)))
+    })))
+
+
+  val isSuperUser: ApiUser => Boolean = user =>
+    user.appId == superUser.getString("appId") && user.appKey == superUser.getString("appKey")
+  val adminRoutes: ApiUser => Route = user => path("admin")(authorize(isSuperUser(user))(concat(
+    path("crash") {
+      paintWsActor ! Crash
+      complete((StatusCodes.OK, "Crash event created"))
+    },
+    path("users")(get {
+      val getUsers = (dbRegistryActor ? GetAllUsers).mapTo[GetUserResponse]
+      onSuccess(getUsers) { resp =>
+        if (resp.message == "SUCCESS") {
+          val responseEntity = HttpEntity(contentType = ContentTypes.`application/json`, string = resp.toJson.prettyPrint)
+          complete(HttpResponse(entity = responseEntity, status = StatusCodes.OK))
+        } else complete(StatusCodes.InternalServerError)
+      }
+    }),
+    path("user")(postSession(entity(as[ApiUser]) { newApiUser =>
+      val createUserResponse = (dbRegistryActor ? CreateUser(newApiUser)).mapTo[String]
+      onSuccess(createUserResponse)(msg => msg match {
+        case "SUCCESS" => complete(StatusCodes.Created)
+        case _ => complete((StatusCodes.BadRequest, msg))
+      })
+    }))
+  )))
 }

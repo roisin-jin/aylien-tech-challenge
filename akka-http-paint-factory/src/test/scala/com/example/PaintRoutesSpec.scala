@@ -1,7 +1,5 @@
 package com.example
 
-
-
 import java.sql.Timestamp
 import java.time.Instant
 
@@ -18,7 +16,7 @@ object TestDbRegistryActor extends DbRegistryActor with TestDbConfig {}
 
 class PaintRoutesSpec extends WordSpec with Matchers with BeforeAndAfterAll with ScalaFutures with ScalatestRouteTest {
 
-  import JsonFormats._
+  import com.example.util.JsonFormats._
   import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 
   implicit val executionConext = system.dispatcher
@@ -29,12 +27,12 @@ class PaintRoutesSpec extends WordSpec with Matchers with BeforeAndAfterAll with
 
   val testDbRegistry = system.actorOf(Props(TestDbRegistryActor),"TestDbRegistryActor")
   val paintWsActor = system.actorOf(PaintWsActor.props, "paintWsActor")
-  lazy val routes = new PaintRoutes(testDbRegistry, paintWsActor).routes
+  lazy val routes = new PaintRoutes(testDbRegistry, paintWsActor).rootRoutes
 
   // use the json formats to marshal and unmarshall objects in the test
 
 
-  "UserRoutes" should {
+  "PaintRoutes" should {
     "return no users if no present (GET /users)" in {
       // note that there's no need for the host part in the uri:
       val request = HttpRequest(uri = "/users")

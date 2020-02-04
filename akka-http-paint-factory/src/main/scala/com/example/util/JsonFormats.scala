@@ -1,11 +1,11 @@
-package com.example
+package com.example.util
 
 import java.sql.Timestamp
-import java.time.{ Instant, ZoneId }
+import java.time.Instant
 
 import com.example.db.DbRegistryActor.GetUserResponse
-import com.example.db.{ ApiUser, ApiUserRequestRecord }
-import spray.json.{ DefaultJsonProtocol, JsNumber, JsValue, JsonFormat }
+import com.example.db.{ApiUser, ApiUserRequestRecord}
+import spray.json.{DefaultJsonProtocol, JsNumber, JsValue, JsonFormat}
 
 object JsonFormats extends DefaultJsonProtocol  {
 
