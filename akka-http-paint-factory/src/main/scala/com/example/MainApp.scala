@@ -26,7 +26,7 @@ object MainApp extends App {
   // Set up HTTPS support for api credentials
   val secret = system.settings.config.getString("main-app.https.secret").toCharArray
   val ks: KeyStore = KeyStore.getInstance("PKCS12")
-  val keystore: InputStream = getClass.getClassLoader.getResourceAsStream("server.p12")
+  val keystore: InputStream = getClass.getClassLoader.getResourceAsStream("server.pkcs12")
 
   require(keystore != null, "Keystore required!")
   ks.load(keystore, secret)

@@ -42,7 +42,7 @@ class PaintWsActor(implicit system: ActorSystem) extends Actor {
     case Crash =>
       val uri = Uri(PY_APP_URL + Uri./ + CRASH_PATH)
       http.singleRequest(HttpRequest(HttpMethods.GET, uri)) onComplete {
-        case Success(resp) if resp.status == StatusCodes.OK => sender() ! "The app has crashed"
+        case Success(resp) if resp.status == StatusCodes.OK => system.log.info("Python app has crashed")
         case _ => system.log.error("Crash request has failed")
       }
   }

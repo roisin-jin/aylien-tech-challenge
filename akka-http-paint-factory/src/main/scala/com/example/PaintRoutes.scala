@@ -107,12 +107,17 @@ class PaintRoutes(dbRegistryActor: ActorRef, paintWsActor: ActorRef)(implicit sy
         )),
       path("admin")(authorize(isSuperUser(user))(
         concat(
-          path("crash")(onSuccess((paintWsActor ? Crash).mapTo[String])(msg => complete((StatusCodes.OK, msg)))),
+          path("crash") {
+            paintWsActor ! Crash
+            complete((StatusCodes.OK, "Crash event created"))
+          },
           path("users")(get {
             val getUsers = (dbRegistryActor ? GetAllUsers).mapTo[GetUserResponse]
             onSuccess(getUsers) { resp =>
-              val status = if (resp.message == "SUCCESS") StatusCodes.OK else StatusCodes.InternalServerError
-              complete((status, resp))
+              if (resp.message == "SUCCESS") {
+                val responseEntity = HttpEntity(contentType = ContentTypes.`application/json`, string = resp.toJson.prettyPrint)
+                complete(HttpResponse(entity = responseEntity, status = StatusCodes.OK))
+              } else complete(StatusCodes.InternalServerError)
             }
           }),
           path("user")(postSession(entity(as[ApiUser]) { newApiUser =>
