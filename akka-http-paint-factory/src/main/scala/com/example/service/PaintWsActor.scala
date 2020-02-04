@@ -1,12 +1,10 @@
-package com.example
+package com.example.service
 
-import akka.actor.ActorSystem
-import akka.actor.{ Actor, Props }
+import akka.actor.{Actor, ActorSystem, Props}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.Uri.Query
-import akka.http.scaladsl.model.{ HttpMethods, HttpRequest, StatusCodes, Uri }
+import akka.http.scaladsl.model.{HttpMethods, HttpRequest, StatusCodes, Uri}
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import com.example.PaintWsActor.Crash
 import com.example.db.ApiUserRequestRecord
 
 import scala.util.Success
@@ -17,10 +15,9 @@ object PaintWsActor {
   def props: Props = Props[PaintWsActor]
 }
 
-
-
 class PaintWsActor(implicit system: ActorSystem) extends Actor {
 
+  import com.example.service.PaintWsActor.Crash
   import system.dispatcher
 
   private val http = Http(system)

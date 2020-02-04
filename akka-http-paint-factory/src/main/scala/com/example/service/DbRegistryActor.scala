@@ -1,11 +1,17 @@
-package com.example.db
+package com.example.service
 
-import akka.actor.{Actor, ActorLogging}
+import akka.actor.{Actor, ActorLogging, ActorSystem}
+import akka.pattern.pipe
+import com.example.db._
 import com.example.util.ApiCredential
 
 import scala.util.{Failure, Success}
 
-object ProdDbRegistryActor extends DbRegistryActor with ProdDdConfig {}
+class ProdDbRegistryActor(implicit system: ActorSystem) extends DbRegistryActor with ProdDdConfig {
+  import system.dispatcher
+  val apiUserDao: ApiUserDao = new ApiUserDao()
+  val apiUserRequestRecordDao: ApiUserRequestRecordDao = new ApiUserRequestRecordDao()
+}
 
 object DbRegistryActor {
 
@@ -27,8 +33,8 @@ trait DbRegistryActor extends Actor with ActorLogging with DatabaseConfig
   import DbRegistryActor._
   import context.dispatcher
 
-  val apiUserDao = new ApiUserDao()
-  val apiUserRequestRecordDao = new ApiUserRequestRecordDao()
+  def apiUserDao: ApiUserDao
+  def apiUserRequestRecordDao: ApiUserRequestRecordDao
 
   //Registering the Actor
   def receive: Receive = {
@@ -42,18 +48,14 @@ trait DbRegistryActor extends Actor with ActorLogging with DatabaseConfig
           sender ! GetUserResponse(Seq.empty, failure.getMessage)
       }
     case GetAllUsers =>
-      apiUserDao.findAllUsers onComplete {
-        case Success(users) => sender ! GetUserResponse(users, "SUCCESS")
-        case Failure(failure) =>
-          log.error("Cant load all users!", failure)
-          sender ! GetUserResponse(Seq.empty, failure.getMessage)
-      }
-    //Get user request history
+      val result = apiUserDao.findAllUsers map (GetUserResponse(_, "SUCCESS"))
+      result.pipeTo(sender())
     case GetUserRequestRecords(userId, size, offset) =>
       apiUserRequestRecordDao.findUserRequestsHistory(userId, size, offset) onComplete {
         case Success(result) => sender ! GetUserRequestRecordsResponse(result)
         case Failure(failure) =>
           log.error("Failed to find request history for user {} : {}", userId, failure)
+          sender ! GetUserRequestRecordsResponse(Seq.empty)
       }
     case CreateUser(apiUser) =>
       apiUserDao.insertApiUser(apiUser) onComplete {

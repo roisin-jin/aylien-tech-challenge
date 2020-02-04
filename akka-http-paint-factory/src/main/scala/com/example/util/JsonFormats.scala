@@ -3,7 +3,7 @@ package com.example.util
 import java.sql.Timestamp
 import java.time.Instant
 
-import com.example.db.DbRegistryActor.GetUserResponse
+import com.example.service.DbRegistryActor.GetUserResponse
 import com.example.db.{ApiUser, ApiUserRequestRecord}
 import spray.json.{DefaultJsonProtocol, JsNumber, JsValue, JsonFormat}
 
