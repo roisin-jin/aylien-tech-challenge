@@ -23,7 +23,7 @@ object JsonFormats extends DefaultJsonProtocol  {
 
   implicit val apiUserJsonFormat = jsonFormat7(ApiUser)
   implicit val apiUserRequestRecordJsonFormat = jsonFormat4(ApiUserRequestRecord)
-  implicit val getUsersResponseJsonFormat = jsonFormat2(GetUserResponse)
+  implicit val getUsersResponseJsonFormat = jsonFormat1(GetUserResponse)
 
   implicit val paintDemandJsonFormat = jsonFormat2(PaintDemand)
   implicit val paintDemandsJsonFormat = jsonFormat2(PaintDemands)

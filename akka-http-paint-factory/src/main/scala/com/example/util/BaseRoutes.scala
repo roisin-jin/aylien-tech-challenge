@@ -12,8 +12,8 @@ trait BaseRoutes {
   implicit def executionContext: ExecutionContext = system.dispatcher
   protected implicit lazy val timeout = Timeout.create(system.settings.config.getDuration("main-app.routes.ask-timeout"))
 
-  val dbRegistryActor: ActorRef
-  val paintWsActor: ActorRef
+  def dbRegistryActor: ActorRef
+  def paintWsActor: ActorRef
 
   protected val postSession = pathEnd & post
 }

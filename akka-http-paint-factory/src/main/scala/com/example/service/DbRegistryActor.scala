@@ -1,11 +1,11 @@
 package com.example.service
 
-import akka.actor.{Actor, ActorLogging, ActorSystem}
-import akka.pattern.pipe
+import akka.actor.{ Actor, ActorLogging, ActorSystem }
 import com.example.db._
 import com.example.util.ApiCredential
 
-import scala.util.{Failure, Success}
+import scala.concurrent.Future
+import scala.util.{ Failure, Success }
 
 class ProdDbRegistryActor(implicit system: ActorSystem) extends DbRegistryActor with ProdDdConfig {
   import system.dispatcher
@@ -17,7 +17,7 @@ object DbRegistryActor {
 
   final case class GetUser(appCreds: ApiCredential)
   final case object GetAllUsers
-  final case class GetUserResponse(users: Seq[ApiUser], message: String)
+  final case class GetUserResponse(users: Seq[ApiUser])
 
   final case class GetUserRequestRecords(userId: Long, size: Int, offset: Int)
   final case class GetUserRequestRecordsResponse(records: Seq[ApiUserRequestRecord])
@@ -42,27 +42,27 @@ trait DbRegistryActor extends Actor with ActorLogging with DatabaseConfig
       apiUserDao.findByAppIdAndKey(appCreds.appId, appCreds.appKey) onComplete {
         case Success(result) =>
           val users = result map (Seq(_)) getOrElse Seq.empty
-          sender ! GetUserResponse(users, "SUCCESS")
+          sender ! GetUserResponse(users)
         case Failure(failure) =>
           log.error("Api User with id - {} and key - {} lookup is failed: {}", appCreds.appId, appCreds.appKey, failure)
-          sender ! GetUserResponse(Seq.empty, failure.getMessage)
       }
     case GetAllUsers =>
-      val result = apiUserDao.findAllUsers map (GetUserResponse(_, "SUCCESS"))
-      result.pipeTo(sender())
+      apiUserDao.findAllUsers map (GetUserResponse(_)) onComplete {
+        case Success(result) => sender ! result
+        case Failure(failure) =>
+          log.error("Failed to all users - {}", failure)
+      }
     case GetUserRequestRecords(userId, size, offset) =>
       apiUserRequestRecordDao.findUserRequestsHistory(userId, size, offset) onComplete {
         case Success(result) => sender ! GetUserRequestRecordsResponse(result)
         case Failure(failure) =>
           log.error("Failed to find request history for user {} : {}", userId, failure)
-          sender ! GetUserRequestRecordsResponse(Seq.empty)
       }
     case CreateUser(apiUser) =>
       apiUserDao.insertApiUser(apiUser) onComplete {
         case Success(_) => sender ! "SUCCESS"
         case Failure(failure) =>
           log.error("Failed to create new user {}", apiUser.email, failure)
-          sender ! failure.getMessage
       }
     case CreateUserRequestRecord(apiUserRequestRecord) =>
       apiUserRequestRecordDao.insertUserRequest(apiUserRequestRecord) andThen {

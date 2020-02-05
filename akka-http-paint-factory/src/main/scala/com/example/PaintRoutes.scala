@@ -27,7 +27,7 @@ trait PaintRoutes extends BaseRoutes {
   val userCache: Cache[ApiCredential, AuthenticationResult[ApiUser]]
   val wsCache: Cache[String, RouteResult]
 
-  private val maxRequestsPerSecond = system.settings.config.getInt("main-app.rate-limit.requests-per-second")
+  private lazy val maxRequestsPerSecond = system.settings.config.getInt("main-app.rate-limit.requests-per-second")
 
   val challenge = HttpChallenges.basic("paintFactory")
 
@@ -39,7 +39,7 @@ trait PaintRoutes extends BaseRoutes {
       val authenticationResult = userResponse map (_.users.headOption.map(Right(_)).getOrElse(Left(challenge)))
       // Initiate cache if it's the first time seeing user if there's no error
       userResponse andThen {
-        case Success(GetUserResponse(_, "SUCCESS")) => userCache.put(creds, authenticationResult.mapTo[AuthenticationResult[ApiUser]])
+        case Success(GetUserResponse(_)) => userCache.put(creds, authenticationResult.mapTo[AuthenticationResult[ApiUser]])
       }
       authenticationResult
     }
@@ -56,7 +56,7 @@ trait PaintRoutes extends BaseRoutes {
   }
 
   // Create rate limit throttler
-  val requestedWithinRate = throttle(maxRequestsPerSecond)
+  lazy val requestedWithinRate = throttle(maxRequestsPerSecond)
   lazy val paintRoutes: Route = apiAuthenticateOrRejectWithChallenge(apiUserAuthenticator _)(user => concat(
     pathPrefix("v1")(authorize(user.hasV1Access)(requestedWithinRate(v1Routes(user)))),
     pathPrefix("v2")(authorize(user.hasValidAccess)(requestedWithinRate(v2Routes(user))))

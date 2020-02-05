@@ -1,14 +1,16 @@
 package com.example
 
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse, StatusCodes}
+import akka.http.scaladsl.model.{ ContentTypes, HttpEntity, HttpResponse, StatusCodes }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.example.db.ApiUser
-import com.example.service.DbRegistryActor.{CreateUser, GetAllUsers, GetUserResponse}
+import com.example.service.DbRegistryActor.{ CreateUser, GetAllUsers, GetUserResponse }
 import com.example.service.PaintWsActor.Crash
-import com.example.util.{ApiCredential, BaseRoutes}
+import com.example.util.{ ApiCredential, BaseRoutes }
 import com.typesafe.config.Config
+
+import scala.concurrent.Future
 
 trait SuperAdminRoutes extends BaseRoutes {
 
@@ -34,12 +36,10 @@ trait SuperAdminRoutes extends BaseRoutes {
         complete((StatusCodes.Accepted, "Crash event created"))
       },
       path("users")(get {
-        val getUsers = (dbRegistryActor ? GetAllUsers).mapTo[GetUserResponse]
-        onSuccess(getUsers) { resp =>
-          if (resp.message == "SUCCESS") {
-            val responseEntity = HttpEntity(contentType = ContentTypes.`application/json`, string = resp.toJson.prettyPrint)
-            complete(HttpResponse(entity = responseEntity, status = StatusCodes.OK))
-          } else complete(StatusCodes.InternalServerError)
+        val getUsers: Future[Any] = dbRegistryActor ? GetAllUsers
+        onSuccess(getUsers.mapTo[GetUserResponse]) { resp =>
+          val responseEntity = HttpEntity(contentType = ContentTypes.`application/json`, string = resp.toJson.prettyPrint)
+          complete(HttpResponse(entity = responseEntity, status = StatusCodes.OK))
         }
       }),
       path("user")(postSession(entity(as[ApiUser]) { newApiUser =>
