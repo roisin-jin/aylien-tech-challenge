@@ -3,11 +3,11 @@ package com.example.service
 import akka.actor.{Actor, ActorSystem, Props}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.Uri.Query
-import akka.http.scaladsl.model.{HttpMethods, HttpRequest, StatusCodes, Uri}
+import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import com.example.db.ApiUserRequestRecord
 
-import scala.util.Success
+import scala.util.{Failure, Success}
 
 object PaintWsActor {
 
@@ -28,19 +28,20 @@ class PaintWsActor(implicit system: ActorSystem) extends Actor {
 
   def receive: Receive = {
     case ApiUserRequestRecord(_, userId, input, _) =>
-      val requestSender = sender()
+      val replyTo = sender()
       val uri = Uri(PY_APP_URL + Uri./ + INDEX_PATH).withQuery(Query("input" -> input))
       http.singleRequest(HttpRequest(HttpMethods.GET, uri)) onComplete {
-        case Success(resp) if resp.status == StatusCodes.OK =>
-          Unmarshal(resp.entity).to[String] map (msg => requestSender ! msg) recover { case e => system.log.error(e.getMessage)}
-        case _ =>
-          system.log.error("Paint request {} from user {} has failed", input, userId)
+        case Success(resp) =>
+          Unmarshal(resp.entity).to[String] map (msg => replyTo ! msg) recover { case e =>
+            system.log.error(e.getMessage, "Failed to parse response entity!")}
+        case Failure(exception) =>
+          system.log.error(exception,"Paint request {} from user {} has failed", input, userId)
       }
     case Crash =>
       val uri = Uri(PY_APP_URL + Uri./ + CRASH_PATH)
       http.singleRequest(HttpRequest(HttpMethods.GET, uri)) onComplete {
-        case Success(resp) if resp.status == StatusCodes.OK => system.log.info("Python app has crashed")
-        case _ => system.log.error("Crash request has failed")
+        case Success(resp) => system.log.info("Python app has crashed")
+        case Failure(exception) => system.log.error(exception, "Crash request has failed")
       }
   }
 

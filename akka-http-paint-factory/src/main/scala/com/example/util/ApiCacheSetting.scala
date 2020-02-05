@@ -2,7 +2,6 @@ package com.example.util
 
 import akka.http.caching.LfuCache
 import akka.http.caching.scaladsl.{Cache, CachingSettings}
-import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.server.Directives.AuthenticationResult
 import akka.http.scaladsl.server.RouteResult
 import com.example.db.ApiUser

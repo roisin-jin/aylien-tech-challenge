@@ -1,4 +1,4 @@
-package com.example
+package com.example.routes
 
 import java.sql.Timestamp
 import java.time.{ZoneId, ZonedDateTime}
@@ -46,13 +46,18 @@ trait PaintRoutes extends BaseRoutes {
     case None => Future(Left(challenge))
   }
 
-  def processPaintRequest(user: ApiUser, inputJsonStr: String): Future[String] = {
+  def generateUserRequestRecord(user: ApiUser, inputJsonStr: String): CreateUserRequestRecord = {
     val requestTime = ZonedDateTime.now.withZoneSameInstant(ZoneId.of("UTC")).toInstant
     val apiUserRequestRecord = ApiUserRequestRecord(0, user.id, inputJsonStr, Timestamp.from(requestTime))
+    CreateUserRequestRecord(apiUserRequestRecord)
+  }
+
+  def processPaintRequest(user: ApiUser, inputJsonStr: String): Future[String] = {
+    val createdUserRequestRecord = generateUserRequestRecord(user, inputJsonStr)
 
     // Persist user request before sending request to the paintWs
-    dbRegistryActor ! CreateUserRequestRecord(apiUserRequestRecord)
-    (paintWsActor ? apiUserRequestRecord).mapTo[String]
+    dbRegistryActor ! createdUserRequestRecord
+    (paintWsActor ? createdUserRequestRecord.apiUserRequestRecord).mapTo[String]
   }
 
   // Create rate limit throttler

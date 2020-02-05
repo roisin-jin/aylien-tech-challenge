@@ -1,23 +1,20 @@
-package com.example
+package com.example.routes
 
-import akka.http.scaladsl.model.{ ContentTypes, HttpEntity, HttpResponse, StatusCodes }
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.pattern.ask
 import com.example.db.ApiUser
-import com.example.service.DbRegistryActor.{ CreateUser, GetAllUsers, GetUserResponse }
+import com.example.service.DbRegistryActor.{CreateUser, GetAllUsers, GetUserResponse}
 import com.example.service.PaintWsActor.Crash
-import com.example.util.{ ApiCredential, BaseRoutes }
+import com.example.util.ApiCredential
 import com.typesafe.config.Config
-
-import scala.concurrent.Future
 
 trait SuperAdminRoutes extends BaseRoutes {
 
   import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
   import com.example.util.CustomizedDirectives._
   import com.example.util.JsonFormats._
-  import spray.json._
 
   private lazy val superUserConf: Config = system.settings.config.getConfig("main-app.superUser")
 
@@ -27,8 +24,6 @@ trait SuperAdminRoutes extends BaseRoutes {
     case None => false
   }
 
-  lazy val getUsers = (dbRegistryActor ? GetAllUsers).mapTo[GetUserResponse]
-
   lazy val adminRoutes: Route =
     pathPrefix("admin")(extractApiCredentials(creds => authorize(isSuperUser(creds))(concat(
       path("crash") {
@@ -36,11 +31,8 @@ trait SuperAdminRoutes extends BaseRoutes {
         complete((StatusCodes.Accepted, "Crash event created"))
       },
       path("users")(get {
-        val getUsers: Future[Any] = dbRegistryActor ? GetAllUsers
-        onSuccess(getUsers.mapTo[GetUserResponse]) { resp =>
-          val responseEntity = HttpEntity(contentType = ContentTypes.`application/json`, string = resp.toJson.prettyPrint)
-          complete(HttpResponse(entity = responseEntity, status = StatusCodes.OK))
-        }
+        val getUsers = (dbRegistryActor ? GetAllUsers).mapTo[GetUserResponse]
+        onSuccess(getUsers)(complete(_))
       }),
       path("user")(postSession(entity(as[ApiUser]) { newApiUser =>
         val createUserResponse = (dbRegistryActor ? CreateUser(newApiUser)).mapTo[String]

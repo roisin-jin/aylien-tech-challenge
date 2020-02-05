@@ -1,11 +1,10 @@
-package com.example
+package com.example.util
 
+import com.example.util.JsonFormats._
 import org.scalatest.FunSuite
 import spray.json._
-import com.example.util.JsonFormats._
-import com.example.util.{PaintDemand, PaintDemands, PaintRequest, PaintRequestValidater}
 
-class PaintRequestTest extends FunSuite {
+class PaintRequestValidaterTest extends FunSuite {
 
   test("testConvertedInternalRequest") {
     val paintRequests = PaintRequest(1, Seq(PaintDemands(1, Seq(PaintDemand(1, 1))), PaintDemands(2, Seq(PaintDemand(1, 0)))))

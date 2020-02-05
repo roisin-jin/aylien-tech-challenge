@@ -5,9 +5,11 @@ import java.time.Instant
 
 import com.example.service.DbRegistryActor.GetUserResponse
 import com.example.db.{ApiUser, ApiUserRequestRecord}
-import spray.json.{DefaultJsonProtocol, JsNumber, JsValue, JsonFormat}
+import spray.json.{DefaultJsonProtocol, JsNumber, JsValue, JsonFormat, PrettyPrinter}
 
 object JsonFormats extends DefaultJsonProtocol  {
+
+  implicit val printer = PrettyPrinter
 
   // Json support for timestamp format (UTC zone)
   implicit val timestampFormat: JsonFormat[Timestamp] = new JsonFormat[Timestamp] {
