@@ -25,7 +25,7 @@ object MainApp extends App with PaintRoutes with SuperAdminRoutes {
 
   val defaultCacheSettings = CachingSettings(system)
   val userCache = ApiCacheSetting.generateUserCache(defaultCacheSettings)
-  val wsCache = ApiCacheSetting.generatePathCache(defaultCacheSettings)
+  val wsCache = ApiCacheSetting.generateWsResultCache(defaultCacheSettings)
 
   // Set up HTTPS support for api credentials
   val secret = system.settings.config.getString("main-app.https.secret").toCharArray

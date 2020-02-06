@@ -27,7 +27,7 @@ class PaintWsActor(implicit system: ActorSystem) extends Actor {
 
 
   def receive: Receive = {
-    case ApiUserRequestRecord(_, userId, input, _) =>
+    case ApiUserRequestRecord(_, userId, input, _, _) =>
       val replyTo = sender()
       val uri = Uri(PY_APP_URL + Uri./ + INDEX_PATH).withQuery(Query("input" -> input))
       http.singleRequest(HttpRequest(HttpMethods.GET, uri)) onComplete {

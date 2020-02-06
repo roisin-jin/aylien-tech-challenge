@@ -22,7 +22,7 @@ object ApiCacheSetting {
     LfuCache(cachingSettings)
   }
 
-  def generatePathCache(defaultCachingSettings: CachingSettings): Cache[String, RouteResult] = {
+  def generateWsResultCache(defaultCachingSettings: CachingSettings): Cache[String, String] = {
 
     val lfuCacheSettings = defaultCachingSettings.lfuCacheSettings
       .withInitialCapacity(25)

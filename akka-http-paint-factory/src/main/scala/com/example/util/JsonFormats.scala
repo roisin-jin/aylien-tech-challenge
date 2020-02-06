@@ -3,9 +3,9 @@ package com.example.util
 import java.sql.Timestamp
 import java.time.Instant
 
-import com.example.service.DbRegistryActor.GetUserResponse
-import com.example.db.{ApiUser, ApiUserRequestRecord}
-import spray.json.{DefaultJsonProtocol, JsNumber, JsValue, JsonFormat, PrettyPrinter}
+import com.example.service.DbRegistryActor.{ GetUserRequestRecordsResponse, GetUserResponse }
+import com.example.db.{ ApiUser, ApiUserRequestRecord }
+import spray.json.{ DefaultJsonProtocol, JsNumber, JsValue, JsonFormat, PrettyPrinter }
 
 object JsonFormats extends DefaultJsonProtocol  {
 
@@ -24,8 +24,9 @@ object JsonFormats extends DefaultJsonProtocol  {
   }
 
   implicit val apiUserJsonFormat = jsonFormat7(ApiUser)
-  implicit val apiUserRequestRecordJsonFormat = jsonFormat4(ApiUserRequestRecord)
+  implicit val apiUserRequestRecordJsonFormat = jsonFormat5(ApiUserRequestRecord)
   implicit val getUsersResponseJsonFormat = jsonFormat1(GetUserResponse)
+  implicit val getUsersRecordsResponseJsonFormat = jsonFormat1(GetUserRequestRecordsResponse)
 
   implicit val paintDemandJsonFormat = jsonFormat2(PaintDemand)
   implicit val paintDemandsJsonFormat = jsonFormat2(PaintDemands)

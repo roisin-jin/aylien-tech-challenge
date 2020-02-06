@@ -2,11 +2,12 @@ package com.example.util
 
 import java.util.concurrent.TimeUnit
 
+import akka.http.caching.scaladsl.Cache
 import akka.http.scaladsl.model.StatusCodes
-import akka.http.scaladsl.server.AuthenticationFailedRejection.{CredentialsMissing, CredentialsRejected}
-import akka.http.scaladsl.server.Directives.{complete, extract, extractClientIP, onSuccess, pass, provide, reject}
-import akka.http.scaladsl.server.directives.{AuthenticationDirective, SecurityDirectives}
-import akka.http.scaladsl.server.{AuthenticationFailedRejection, Directive0, Directive1}
+import akka.http.scaladsl.server.AuthenticationFailedRejection.{ CredentialsMissing, CredentialsRejected }
+import akka.http.scaladsl.server.Directives.{ complete, extract, extractClientIP, onSuccess, pass, provide, reject }
+import akka.http.scaladsl.server.directives.{ AuthenticationDirective, CachingDirectives, SecurityDirectives }
+import akka.http.scaladsl.server.{ AuthenticationFailedRejection, Directive0, Directive1, RequestContext, RouteResult }
 import com.google.common.util.concurrent.RateLimiter
 
 import scala.concurrent.Future

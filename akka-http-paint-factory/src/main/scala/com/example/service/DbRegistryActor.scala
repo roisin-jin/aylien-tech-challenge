@@ -1,10 +1,10 @@
 package com.example.service
 
-import akka.actor.{Actor, ActorLogging, ActorSystem}
+import akka.actor.{ Actor, ActorLogging, ActorSystem }
 import com.example.db._
 import com.example.util.ApiCredential
 
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success }
 
 class ProdDbRegistryActor(implicit system: ActorSystem) extends DbRegistryActor with ProdDdConfig {
 
@@ -50,7 +50,7 @@ trait DbRegistryActor extends Actor with ActorLogging with DatabaseConfig
           val users = result map (Seq(_)) getOrElse Seq.empty
           replyTo ! GetUserResponse(users)
         case Failure(failure) =>
-          log.error(failure, "Api User with id - {} and key - {} lookup is failed", appCreds.appId, appCreds.appKey)
+          log.error(failure, "Api User with id {} and key {} lookup is failed", appCreds.appId, appCreds.appKey)
       }
     case GetAllUsers =>
       val replyTo = sender()
@@ -74,7 +74,9 @@ trait DbRegistryActor extends Actor with ActorLogging with DatabaseConfig
           log.error(failure, "Failed to create new user {}", apiUser.email)
       }
     case CreateUserRequestRecord(apiUserRequestRecord) =>
-      apiUserRequestRecordDao.insertUserRequest(apiUserRequestRecord) andThen {
+      val replyTo = sender()
+      apiUserRequestRecordDao.insertUserRequest(apiUserRequestRecord)  onComplete {
+        case Success(_) => replyTo ! "SUCCESS"
         case Failure(failure) =>
           log.error(failure, "Cannot add request record for user id {}", apiUserRequestRecord.userId)
       }
