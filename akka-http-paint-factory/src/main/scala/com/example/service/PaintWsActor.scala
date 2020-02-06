@@ -29,9 +29,11 @@ class PaintWsActor(implicit system: ActorSystem) extends Actor {
   def receive: Receive = {
     case ApiUserRequest(userId, input) =>
       val replyTo = sender()
-      val uri = Uri(PY_APP_URL + Uri./ + INDEX_PATH).withQuery(Query("input" -> input))
+      val uri = Uri(PY_APP_URL + INDEX_PATH).withQuery(Query("input" -> input))
+      system.log.info("Forwarding input request to ", uri)
       http.singleRequest(HttpRequest(HttpMethods.GET, uri)) onComplete {
         case Success(resp) =>
+          system.log.info("Get response {} from paint ws", resp)
           Unmarshal(resp.entity).to[String] map (msg => replyTo ! msg) recover { case e =>
             system.log.error(e.getMessage, "Failed to parse response entity!")}
         case Failure(exception) =>

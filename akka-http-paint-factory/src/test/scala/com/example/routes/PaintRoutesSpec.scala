@@ -81,6 +81,7 @@ class PaintRoutesSpec extends WordSpec with PaintRoutes
     "parse out solution from (POST /v2/solve)" in {
 
       val paintRequest = PaintRequest(2, Seq(PaintDemands(1, Seq(PaintDemand(1, 1))), PaintDemands(2, Seq(PaintDemand(2, 0)))))
+      println(paintRequest.toJson.compactPrint)
       val request = Post(uri = "/v2/solve").withEntity(Marshal(paintRequest).to[MessageEntity].futureValue)
       val result = wrapUpWithUserHeaders(request) ~> routes ~> runRoute
 

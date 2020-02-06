@@ -1,8 +1,8 @@
 lazy val akkaHttpVersion = "10.1.11"
 lazy val akkaVersion    = "2.6.3"
 
-lazy val root = (project in file("."))
-  .enablePlugins(JavaAppPackaging).
+lazy val root = (project in file(".")).
+  enablePlugins(DockerPlugin).
   settings(
     inThisBuild(List(
       organization    := "com.example",
@@ -30,20 +30,6 @@ lazy val root = (project in file("."))
       "org.mockito"       %% "mockito-scala"            % "1.11.2"        % Test,
       "com.h2database"    % "h2"                        % "1.4.199"       % Test,
     ),
-    // JVM Arguments to fix Java issue in docker. Force to use CGroup Memory assignments
-    javaOptions in Universal ++= Seq(
-      "-XX:+UnlockExperimentalVMOptions",
-      "-XX:+UseCGroupMemoryLimitForHeap",
-      "-XX:MaxRAMFraction=1",
-      "-XX:MinHeapFreeRatio=20",
-      "-XX:MaxHeapFreeRatio=40",
-      "-XX:+UseConcMarkSweepGC",
-      "-XX:+DisableExplicitGC",
-      "-XX:+CMSClassUnloadingEnabled",
-      "-XX:+CMSScavengeBeforeRemark",
-      "-XX:SurvivorRatio=4",
-      "-XX:+OptimizeStringConcat"
-    ).map(opt => "-J" + opt),
     dockerRepository := Some(sys.props.get("dockerRepository").getOrElse("gcr.io/mythic-emissary-266512")),
     packageName in Docker := sys.props.get("dockerPackageName").getOrElse("paintFactory"),
     version in Docker := sys.props.get("dockerPackageVersion").getOrElse("latest"),

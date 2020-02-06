@@ -14,8 +14,8 @@ trait ApiUserRequestRecordComponent extends BaseComponent with ApiUserTableDefin
   class ApiUserRequestRecordTable(tag: Tag) extends BaseTable[ApiUserRequestRecord](tag, "api_user_request_record") {
 
     val userId = column[Long]("api_user_id")
-    val httpMethod = column[String]("http_method", O.Length(10))
     val httpUri = column[String]("http_uri", O.Length(1024))
+    val httpMethod = column[String]("http_method", O.Length(10))
     val postBody = column[Option[String]]("post_body", O.Length(2048))
     val responseCode = column[String]("response_code", O.Length(10))
     val responseMessage = column[String]("response_message", O.Length(1024))
@@ -24,7 +24,7 @@ trait ApiUserRequestRecordComponent extends BaseComponent with ApiUserTableDefin
       foreignKey("API_USER_ID_FK", userId, apiUsersTable)(_.id, onDelete = ForeignKeyAction.Cascade)
 
     //Add id to *
-    def * = (id, userId, httpMethod, httpUri, postBody, responseCode, responseMessage, createdAt) <> (ApiUserRequestRecord.tupled, ApiUserRequestRecord.unapply)
+    def * = (id, userId, httpUri, httpMethod, postBody, responseCode, responseMessage, createdAt) <> (ApiUserRequestRecord.tupled, ApiUserRequestRecord.unapply)
 
   }
 

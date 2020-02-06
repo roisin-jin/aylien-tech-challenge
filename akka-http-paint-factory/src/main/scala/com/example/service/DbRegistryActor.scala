@@ -37,6 +37,8 @@ trait DbRegistryActor extends Actor with ActorLogging with SlickDbConfig
 
   import DbRegistryActor._
   import context.dispatcher
+  import com.example.util.JsonFormats._
+  import spray.json._
 
   val apiUserDao: ApiUserDao
   val apiUserRequestRecordDao: ApiUserRequestRecordDao
@@ -74,7 +76,8 @@ trait DbRegistryActor extends Actor with ActorLogging with SlickDbConfig
           log.error(failure, "Failed to create new user {}", apiUser.email)
       }
     case CreateUserRequestRecord(apiUserRequestRecord) =>
-      apiUserRequestRecordDao.insertUserRequest(apiUserRequestRecord) onComplete {
+      log.debug("Receive record: {}", apiUserRequestRecord.toJson.prettyPrint)
+      apiUserRequestRecordDao.insertUserRequest(apiUserRequestRecord) andThen {
         case Failure(failure) =>
           log.error(failure, "Cannot add request record for user id {}", apiUserRequestRecord.userId)
       }
