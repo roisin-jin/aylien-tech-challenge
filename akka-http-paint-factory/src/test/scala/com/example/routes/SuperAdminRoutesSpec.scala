@@ -38,6 +38,12 @@ class SuperAdminRoutesSpec extends WordSpec with SuperAdminRoutes with Matchers 
 
   "AdminRoutes" should {
 
+    "should reject if no admin key is provided" in {
+      Get("/admin/users") ~> testroutes ~> check {
+        status should ===(StatusCodes.Forbidden)
+      }
+    }
+
     "return no users if no present (GET /admin/users)" in {
       // note that there's no need for the host part in the uri:
 

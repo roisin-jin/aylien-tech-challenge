@@ -60,7 +60,21 @@ class PaintRoutesSpec extends WordSpec with PaintRoutes
     Future(mockApiUserRequestRecord)
 
   "PainRoutes v1" should {
-    "return IMPOSSIBLE if no present (GET /v1/?input) with unsovlable request" in {
+
+    "return reject if present with request of invalid color type format" in {
+
+      val input = """{"colors":1,"customers":2,"demands":[[1,1,3],[1,1,0]]}"""
+      val request = Get(uri = s"/v1/?input=$input")
+
+      val result = wrapUpWithUserHeaders(request) ~> routes ~> runRoute
+      check {
+        status.intValue() should ===(463)
+        entityAs[String] should include "type can only be either 1 or 0"
+      }(result)
+    }
+
+
+  "return IMPOSSIBLE if no present (GET /v1/?input) with unsolvable request" in {
       // note that there's no need for the host part in the uri:
       val input = """{"colors":1,"customers":2,"demands":[[1,1,1],[1,1,0]]}"""
       val request = Get(uri = s"/v1/?input=$input")
@@ -81,7 +95,6 @@ class PaintRoutesSpec extends WordSpec with PaintRoutes
     "parse out solution from (POST /v2/solve)" in {
 
       val paintRequest = PaintRequest(2, Seq(PaintDemands(1, Seq(PaintDemand(1, 1))), PaintDemands(2, Seq(PaintDemand(2, 0)))))
-      println(paintRequest.toJson.compactPrint)
       val request = Post(uri = "/v2/solve").withEntity(Marshal(paintRequest).to[MessageEntity].futureValue)
       val result = wrapUpWithUserHeaders(request) ~> routes ~> runRoute
 

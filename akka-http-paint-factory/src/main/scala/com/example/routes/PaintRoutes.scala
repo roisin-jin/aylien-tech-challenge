@@ -84,7 +84,7 @@ trait PaintRoutes extends BaseRoutes {
         validateAndProcessPaintRequest(paintRequest, () => paintRequest.getConvertedInternalRequest.toJson.compactPrint, _ match {
           case "IMPOSSIBLE" =>
             val code = PaintRequestValidater.errorCodeNoSolution
-            completeWithApiRequestRecordAdded(code, code.reason, code)
+            completeWithApiRequestRecordAdded(code, code.reason, (code, code.reason))
           case result => {
             //parse response from python app
             val results = result.split(" ")
