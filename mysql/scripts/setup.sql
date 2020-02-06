@@ -19,8 +19,15 @@ ENGINE = InnoDB DEFAULT CHARSET=utf8;
 CREATE TABLE IF NOT EXISTS `api_user_request_record` (
 `id` BIGINT(20) NOT NULL AUTO_INCREMENT,
 `api_user_id` BIGINT(20) NOT NULL,
-`request_input` VARCHAR(256) NOT NULL,
+`http_method` VARCHAR(10) NOT NULL,
+`http_uri` VARCHAR(1024) NOT NULL,
+`post_body` VARCHAR(2048),
+`response_code` VARCHAR(10) NOT NULL,
+`response_message` VARCHAR(1024) NOT NULL,
 `created_at` TIMESTAMP NOT NULL DEFAULT current_timestamp,
 PRIMARY KEY (`id`),
-FOREIGN KEY (`api_user_id`) REFERENCES `api_user`(`id`) ON DELETE CASCADE)
-ENGINE = InnoDB DEFAULT CHARSET=utf8;
+FOREIGN KEY (`api_user_id`) REFERENCES `api_user`(`id`) ON DELETE CASCADE
+) ENGINE = InnoDB DEFAULT CHARSET=utf8;
+
+INSERT INTO `api_user` (`email`, `app_id`, `app_key`, `has_v1_access`) 
+VALUES (`roisin@test.com`, `testUserAppId`, `testUserAppKey`, true);

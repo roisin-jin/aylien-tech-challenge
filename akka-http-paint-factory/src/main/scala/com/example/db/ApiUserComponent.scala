@@ -9,7 +9,7 @@ case class ApiUser(id: Long, appId: String, appKey: String, email: String,
   def hasValidAccess: Boolean = !hasExpired
 }
 
-trait ApiUserTableDefinition extends TableDefinition { self: DatabaseConfig =>
+trait ApiUserTableDefinition extends TableDefinition { self: SlickDbConfig =>
 
   import profile.api._
 
@@ -29,7 +29,7 @@ trait ApiUserTableDefinition extends TableDefinition { self: DatabaseConfig =>
   val apiUsersTable = TableQuery[ApiUserTable]
 }
 
-trait ApiUserComponent extends BaseComponent with ApiUserTableDefinition { self: DatabaseConfig =>
+trait ApiUserComponent extends BaseComponent with ApiUserTableDefinition { self: SlickDbConfig =>
 
   import profile.api._
 

@@ -5,19 +5,19 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import com.example.db.ApiUserRequestRecord
 
 import scala.util.{Failure, Success}
 
 object PaintWsActor {
 
+  case class ApiUserRequest(userId: Long, input: String)
   case object Crash
   def props: Props = Props[PaintWsActor]
 }
 
 class PaintWsActor(implicit system: ActorSystem) extends Actor {
 
-  import com.example.service.PaintWsActor.Crash
+  import com.example.service.PaintWsActor._
   import system.dispatcher
 
   private val http = Http(system)
@@ -27,7 +27,7 @@ class PaintWsActor(implicit system: ActorSystem) extends Actor {
 
 
   def receive: Receive = {
-    case ApiUserRequestRecord(_, userId, input, _, _) =>
+    case ApiUserRequest(userId, input) =>
       val replyTo = sender()
       val uri = Uri(PY_APP_URL + Uri./ + INDEX_PATH).withQuery(Query("input" -> input))
       http.singleRequest(HttpRequest(HttpMethods.GET, uri)) onComplete {

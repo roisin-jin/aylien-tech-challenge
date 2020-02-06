@@ -6,7 +6,7 @@ import slick.sql.SqlAction
 
 import scala.concurrent.Future
 
-trait DatabaseConfig {
+trait SlickDbConfig {
 
   val config: Config = ConfigFactory.load()
 
@@ -25,7 +25,7 @@ trait DatabaseConfig {
 
 }
 
-trait ProdDdConfig extends DatabaseConfig {
+trait ProdDdConfig extends SlickDbConfig {
 
   override val profile: JdbcProfile =  slick.jdbc.MySQLProfile
 

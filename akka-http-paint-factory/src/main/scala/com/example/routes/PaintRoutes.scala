@@ -1,16 +1,19 @@
 package com.example.routes
 
 import java.sql.Timestamp
-import java.time.{ ZoneId, ZonedDateTime }
+import java.time.{Instant, ZoneId, ZonedDateTime}
 
 import akka.http.caching.scaladsl.Cache
+import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.HttpChallenges
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.pattern.ask
-import com.example.db.{ ApiUser, ApiUserRequestRecord }
+import com.example.db.{ApiUser, ApiUserRequestRecord}
 import com.example.service.DbRegistryActor._
+import com.example.service.PaintWsActor.ApiUserRequest
 import com.example.util._
 
 import scala.concurrent.Future
@@ -45,70 +48,81 @@ trait PaintRoutes extends BaseRoutes {
     case None => Future(Left(challenge))
   }
 
-  def generateUserRequestRecord(user: ApiUser, inputJsonStr: String): ApiUserRequestRecord = {
-    val requestTime = ZonedDateTime.now.withZoneSameInstant(ZoneId.of("UTC")).toInstant
-    //leave response be blank string for now
-    ApiUserRequestRecord(0, user.id, inputJsonStr, "", Timestamp.from(requestTime))
-  }
-
-  def processPaintRequest(user: ApiUser, inputJsonStr: String): Future[String] = {
-    wsCache.getOrLoad(inputJsonStr, _ => {
-      val apiUserRequestRecord = generateUserRequestRecord(user, inputJsonStr)
-      (paintWsActor ? apiUserRequestRecord).mapTo[String]
-    })
-  }
-
   // Create rate limit throttler
   lazy val requestedWithinRate = throttle(maxRequestsPerSecond)
-  lazy val paintRoutes: Route = apiAuthenticateOrRejectWithChallenge(apiUserAuthenticator _)(user => concat(
-    pathPrefix("v1")(authorize(user.hasV1Access)(requestedWithinRate(v1Routes(user)))),
-    pathPrefix("v2")(authorize(user.hasValidAccess)(requestedWithinRate(v2Routes(user))))
-  ))
+  lazy val paintRoutes: Route = apiAuthenticateOrRejectWithChallenge(apiUserAuthenticator _)(user =>
+    concat(
+      pathPrefix("v1")(authorize(user.hasV1Access)(requestedWithinRate(v1Routes(user)))),
+      pathPrefix("v2")(authorize(user.hasValidAccess)(requestedWithinRate(v2Routes(user))))
+    ))
 
-  // cache v1 result based on input string
-  lazy val v1Routes: ApiUser => Route = user =>
-    get(parameters("input") { input =>
-      val paintRequest = input.parseJson.convertTo[InternalRequest].getConvertedPaintRequest
-      //Validate request format before further processing
-      PaintRequestValidater.validate(paintRequest) map (errorCode =>
-        complete(errorCode)) getOrElse onSuccess(processPaintRequest(user, input)){
-        case "IMPOSSIBLE" => complete(PaintRequestValidater.errorCodeNoSolution)
-        case result => complete(HttpResponse(entity = result, status = StatusCodes.OK))
-      }
+  def v1Routes(implicit user: ApiUser): Route = {
+    val v1SuccessResp: String => Route = resp =>
+      completeWithApiRequestRecordAdded(StatusCodes.OK, resp, (StatusCodes.OK, resp))
 
-    }) ~ post(entity(as[InternalRequest]) { input =>
-      PaintRequestValidater.validate(input.getConvertedPaintRequest) map (errorCode =>
-        complete(errorCode)) getOrElse onSuccess(processPaintRequest(user, input.toJson.compactPrint)){
-        case "IMPOSSIBLE" => complete(PaintRequestValidater.errorCodeNoSolution)
-        case result => complete(HttpResponse(entity = result, status = StatusCodes.OK))
-      }
+    get(parameters("input") { inputStr =>
+      val paintRequest = inputStr.parseJson.convertTo[InternalRequest].getConvertedPaintRequest
+      validateAndProcessPaintRequest(paintRequest, () => inputStr, v1SuccessResp)
+    }) ~ post(entity(as[InternalRequest]) { inputEntity =>
+      val paintRequest = inputEntity.getConvertedPaintRequest
+      validateAndProcessPaintRequest(paintRequest, () => inputEntity.toJson.compactPrint, v1SuccessResp)
     })
+  }
 
-  lazy val v2Routes: ApiUser => Route = user =>
-    // request history of user requests, sorted by most recent
-    // page size set to 50 by default, returning 100 results at most
-    // offset set to 0 by default
+  // request history of user requests, sorted by most recent
+  // page size set to 50 by default, returning 100 results at most
+  // offset set to 0 by default
+  def v2Routes(implicit user: ApiUser): Route =
     pathPrefix("history")(parameterMap { params =>
       val pageSize: Int = math.min(params.getOrElse("pageSize", "50").toInt, 100)
       val offSet: Int = params.getOrElse("offSet", "0").toInt
       val getHistoryRequest = GetUserRequestRecords(user.id, pageSize, offSet)
       val response = (dbRegistryActor ? getHistoryRequest).mapTo[GetUserRequestRecordsResponse]
-      onSuccess(response)(result => complete((StatusCodes.OK, result.records)))
+      onSuccess(response)(result => complete((StatusCodes.OK, result)))
     }) ~
-      path("solve")(postSession(requestedWithinRate(
-        entity(as[PaintRequest])(request =>
-          PaintRequestValidater.validate(request) map (errorCode => complete(errorCode)) getOrElse {
-            val input = request.getConvertedInternalRequest.toJson.compactPrint
-            onSuccess(processPaintRequest(user, input)) {
-              case "IMPOSSIBLE" => complete(PaintRequestValidater.errorCodeNoSolution)
-              case result => {
-                //parse response from python app
-                val results = result.split(" ")
-                val solutions: Seq[PaintDemand] = (1 to results.size) map (color => PaintDemand(color, results(color - 1).toInt))
-                val responseEntity = HttpEntity(contentType = ContentTypes.`application/json`, string = PaintResponse(solutions).toJson.prettyPrint)
-                complete(HttpResponse(entity = responseEntity, status = StatusCodes.OK))
-              }
-            }
+      (path("solve") & postSession) (entity(as[PaintRequest])(paintRequest =>
+        validateAndProcessPaintRequest(paintRequest, () => paintRequest.getConvertedInternalRequest.toJson.compactPrint, _ match {
+          case "IMPOSSIBLE" =>
+            val code = PaintRequestValidater.errorCodeNoSolution
+            completeWithApiRequestRecordAdded(code, code.reason, code)
+          case result => {
+            //parse response from python app
+            val results = result.split(" ")
+            val solutions: Seq[PaintDemand] = (1 to results.size) map (color => PaintDemand(color, results(color - 1).toInt))
+            val paintRequestJsonStr = PaintResponse(solutions).toJson.prettyPrint
+            val responseEntity = HttpEntity(contentType = ContentTypes.`application/json`, string = paintRequestJsonStr)
+            completeWithApiRequestRecordAdded(StatusCodes.OK, paintRequestJsonStr, (StatusCodes.OK, responseEntity))
           }
-        ))))
+        })))
+
+  def validateAndProcessPaintRequest(paintRequest: PaintRequest, inputBuilder: () => String, onSuccessResponse: String => Route)(implicit user: ApiUser): Route = {
+    //validate request first before further processing
+    PaintRequestValidater.validate(paintRequest) map (errorCode =>
+      completeWithApiRequestRecordAdded(errorCode, errorCode.reason, errorCode)) getOrElse onSuccess {
+      // cache ws result based on input string
+      val input = inputBuilder()
+      val requestIfNoCahcheFound = (paintWsActor ? ApiUserRequest(user.id, input)).mapTo[String]
+      wsCache.getOrLoad(input, _ => requestIfNoCahcheFound)
+    }(onSuccessResponse(_))
+  }
+
+  //Completes routes by having request cord persisted to DB
+  def completeWithApiRequestRecordAdded(responseCode: StatusCode, responseMessage: String, m: => ToResponseMarshallable)(implicit user: ApiUser): Route = ctx => {
+    val requestTime = ZonedDateTime.now.withZoneSameInstant(ZoneId.of("UTC")).toInstant
+    generateUserRequestRecord(ctx.request, responseCode, responseMessage, requestTime) flatMap { apiUserRequestRecord =>
+      dbRegistryActor ! CreateUserRequestRecord(apiUserRequestRecord)
+      ctx.complete(m)
+    }
+  }
+
+  def generateUserRequestRecord(httpRequest: HttpRequest, responseCode: StatusCode, responseMessage: String, requestTime: Instant)(implicit user: ApiUser) = {
+    val futurePostDody: Future[Option[String]] = if (httpRequest.method == HttpMethods.POST) {
+      Unmarshal(httpRequest.entity).to[String].map(Some(_))
+    } else Future(None)
+
+    futurePostDody map { body =>
+      ApiUserRequestRecord(0, user.id, httpRequest.uri.toString, httpRequest.method.value, body, responseCode.value, responseMessage, Timestamp.from(requestTime))
+    }
+  }
+
 }

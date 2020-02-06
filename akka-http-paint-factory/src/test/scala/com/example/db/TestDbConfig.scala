@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import com.example.service.DbRegistryActor
 import slick.jdbc.JdbcProfile
 
-trait TestDbConfig extends DatabaseConfig {
+trait TestDbConfig extends SlickDbConfig {
 
   override val profile: JdbcProfile =  slick.jdbc.H2Profile
 

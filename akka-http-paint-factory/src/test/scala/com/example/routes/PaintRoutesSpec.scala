@@ -1,22 +1,24 @@
 package com.example.routes
 
+import java.time.Instant
+
 import akka.actor.ActorSystem
-import akka.http.caching.scaladsl.{ Cache, CachingSettings }
+import akka.http.caching.scaladsl.{Cache, CachingSettings}
 import akka.http.scaladsl.marshalling.Marshal
 import akka.http.scaladsl.model.headers.RawHeader
-import akka.http.scaladsl.model.{ ContentTypes, HttpRequest, MessageEntity, StatusCodes }
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives.AuthenticationResult
-import akka.http.scaladsl.server.{ Route, RouteResult }
-import akka.http.scaladsl.testkit.{ RouteTestTimeout, ScalatestRouteTest }
+import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.testkit.{RouteTestTimeout, ScalatestRouteTest}
 import akka.testkit.TestProbe
-import com.example.MainApp.system
-import com.example.db.{ ApiUser, ApiUserRequestRecord }
-import com.example.service.DbRegistryActor.{ CreateUserRequestRecord, GetUserRequestRecords, GetUserRequestRecordsResponse }
-import com.example.util.{ ApiCacheSetting, ApiCredential, PaintDemand, PaintDemands, PaintRequest, PaintRequestValidater }
+import com.example.db.{ApiUser, ApiUserRequestRecord}
+import com.example.service.DbRegistryActor.{CreateUserRequestRecord, GetUserRequestRecords, GetUserRequestRecordsResponse}
+import com.example.service.PaintWsActor.ApiUserRequest
+import com.example.util._
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.when
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{ Matchers, WordSpec }
+import org.scalatest.{Matchers, WordSpec}
 import org.scalatestplus.mockito.MockitoSugar
 
 import scala.concurrent.Future
@@ -27,7 +29,7 @@ class PaintRoutesSpec extends WordSpec with PaintRoutes
   with MockitoSugar with Matchers with ScalaFutures with ScalatestRouteTest {
 
   import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
-  import com.example.util.CustomizedDirectives.{ API_APP_ID_HEADER, API_APP_KEY_HEADER }
+  import com.example.util.CustomizedDirectives.{API_APP_ID_HEADER, API_APP_KEY_HEADER}
   import com.example.util.JsonFormats._
   import spray.json._
 
@@ -54,9 +56,8 @@ class PaintRoutesSpec extends WordSpec with PaintRoutes
     RawHeader(API_APP_KEY_HEADER, "testUserKey")))
 
   val mockApiUserRequestRecord = mock[ApiUserRequestRecord]
-  val mockUserRequest = mock[CreateUserRequestRecord]
-  when(mockUserRequest.apiUserRequestRecord).thenReturn(mockApiUserRequestRecord)
-  override def generateUserRequestRecord(user: ApiUser, inputJsonStr: String) = mockApiUserRequestRecord
+  override def generateUserRequestRecord(httpRequest: HttpRequest, responseCode: StatusCode, responseMessage: String, requestTime: Instant)(implicit user: ApiUser) =
+    Future(mockApiUserRequestRecord)
 
   "PainRoutes v1" should {
     "return IMPOSSIBLE if no present (GET /v1/?input) with unsovlable request" in {
@@ -65,13 +66,13 @@ class PaintRoutesSpec extends WordSpec with PaintRoutes
       val request = Get(uri = s"/v1/?input=$input")
 
       val result = wrapUpWithUserHeaders(request) ~> routes ~> runRoute
-      dbRegistryActorProb.expectMsg(5.seconds, mockUserRequest)
-      dbRegistryActorProb.reply("SUCCESS")
-      paintWsActorProb.expectMsg(5.seconds, mockApiUserRequestRecord)
+      paintWsActorProb.expectMsg(10.seconds, ApiUserRequest(1, input))
       paintWsActorProb.reply("IMPOSSIBLE")
+      dbRegistryActorProb.expectMsg(10.seconds, CreateUserRequestRecord(mockApiUserRequestRecord))
 
       check {
-        status should ===(PaintRequestValidater.errorCodeNoSolution)
+        status should ===(StatusCodes.OK)
+        entityAs[String] should ===("IMPOSSIBLE")
       }(result)
     }
   }
@@ -83,10 +84,9 @@ class PaintRoutesSpec extends WordSpec with PaintRoutes
       val request = Post(uri = "/v2/solve").withEntity(Marshal(paintRequest).to[MessageEntity].futureValue)
       val result = wrapUpWithUserHeaders(request) ~> routes ~> runRoute
 
-      dbRegistryActorProb.expectMsg(5.seconds, mockUserRequest)
-      dbRegistryActorProb.reply("SUCCESS")
-      paintWsActorProb.expectMsg(5.seconds, mockApiUserRequestRecord)
+      paintWsActorProb.expectMsg(5.seconds, ApiUserRequest(1, """{"colors":2,"customers":2,"demands":[[1,1,1],[1,2,0]]}"""))
       paintWsActorProb.reply("1 0")
+      dbRegistryActorProb.expectMsg(5.seconds, CreateUserRequestRecord(mockApiUserRequestRecord))
 
       check {
         status should ===(StatusCodes.OK)

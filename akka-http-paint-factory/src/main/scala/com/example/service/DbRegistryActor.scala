@@ -32,7 +32,7 @@ object DbRegistryActor {
 
 }
 
-trait DbRegistryActor extends Actor with ActorLogging with DatabaseConfig
+trait DbRegistryActor extends Actor with ActorLogging with SlickDbConfig
   with ApiUserComponent with ApiUserRequestRecordComponent {
 
   import DbRegistryActor._
@@ -74,9 +74,7 @@ trait DbRegistryActor extends Actor with ActorLogging with DatabaseConfig
           log.error(failure, "Failed to create new user {}", apiUser.email)
       }
     case CreateUserRequestRecord(apiUserRequestRecord) =>
-      val replyTo = sender()
-      apiUserRequestRecordDao.insertUserRequest(apiUserRequestRecord)  onComplete {
-        case Success(_) => replyTo ! "SUCCESS"
+      apiUserRequestRecordDao.insertUserRequest(apiUserRequestRecord) onComplete {
         case Failure(failure) =>
           log.error(failure, "Cannot add request record for user id {}", apiUserRequestRecord.userId)
       }

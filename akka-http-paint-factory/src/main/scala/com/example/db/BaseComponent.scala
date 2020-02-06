@@ -15,7 +15,7 @@ trait Entity {
 /**
   * The repo definition which should be used within an entity repo
   */
-trait TableDefinition { self: DatabaseConfig =>
+trait TableDefinition { self: SlickDbConfig =>
 
   import profile.api._
 
@@ -31,7 +31,7 @@ trait TableDefinition { self: DatabaseConfig =>
 
 }
 
-trait BaseComponent extends TableDefinition { self: DatabaseConfig =>
+trait BaseComponent extends TableDefinition { self: SlickDbConfig =>
 
   import profile.api._
 
