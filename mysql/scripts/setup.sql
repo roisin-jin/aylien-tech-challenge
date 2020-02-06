@@ -29,5 +29,4 @@ PRIMARY KEY (`id`),
 FOREIGN KEY (`api_user_id`) REFERENCES `api_user`(`id`) ON DELETE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET=utf8;
 
-INSERT INTO `api_user` (`email`, `app_id`, `app_key`, `has_v1_access`) 
-VALUES (`roisin@test.com`, `testUserAppId`, `testUserAppKey`, true);
+INSERT INTO `api_user` (`email`, `app_id`, `app_key`, `has_v1_access`) VALUES ("roisin@test.com", "testUserAppId", "testUserAppKey", true);
