@@ -1,0 +1,54 @@
+
+Tasks breakdown with estimation
+
+Akka-http App:
+
+1. Setup Http server with endpoints, config files
+0.5D
+
+2. Define http headers for credentials check, setup https certification to support server-side HTTPS
+0.5D
+
+3. Proper authentication and authorization handling on credentials
+0.5D for dev and unit test
+
+4. Setup cache for user lookup and response from external ws service
+0.5D
+
+5. Design V2 request format with validation checkup rules, each with unique error code
+1D for dev, 0.5D for unit test
+
+6. Inject service to delegate related requests
+2H
+
+7. Integration test with different scenarios
+0.5D
+
+
+DB:
+
+1. Setup slick with JDBC connector (MYSQL and H2)
+0.5D
+
+2. Create entity, table, dao for user and user request record
+1D for dev and unit test
+
+3. Create DB actor to handle DB service requests
+1D for dev and unit test
+
+4. Setup MYSQL for product with schema scripts and pre-loaded data
+0.5D
+
+
+Connecting to internal python APP:
+1. Config python app address
+2. Create WS actor to forward paint requests to the python app
+1D for dev and integration test
+
+Deployment:
+
+1. Dockernize Akka-http app, python app and mysql
+0.5D
+
+2. Create yaml file for deploying to kubernetes
+1D?
