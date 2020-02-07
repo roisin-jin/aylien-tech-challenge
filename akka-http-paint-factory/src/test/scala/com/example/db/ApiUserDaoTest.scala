@@ -17,15 +17,15 @@ class ApiUserDaoTest extends TestKit(ActorSystem("test-system"))
   import system.dispatcher
 
   val testInstance = new ApiUserDao()
-  val testUser = ApiUser(0, "testAppId", "testAppKey", "test@email.com", true, false, Timestamp.from(Instant.now()))
+  val testUser = ApiUser(0, "testAppId_123", "testAppKey_123", "test@email.com", true, false, Timestamp.from(Instant.now()))
 
   require(db != null, "DB required!")
 
   override implicit def patienceConfig: PatienceConfig = PatienceConfig(10 seconds)
 
-  "The generic repository" should "insert User in memory database" in {
+  it should "insert User in memory database" in {
     whenReady(testInstance.insertApiUser(testUser)) { inserted =>
-      inserted should ===(1)
+      inserted.toInt should be > 0
     }
   }
 
@@ -38,7 +38,7 @@ class ApiUserDaoTest extends TestKit(ActorSystem("test-system"))
 
   it should "find all users" in {
     whenReady(testInstance.findAllUsers) { allUsers =>
-      allUsers.filterNot(_.hasExpired).isEmpty should ===(true)
+      allUsers.nonEmpty should ===(true)
     }
   }
 }

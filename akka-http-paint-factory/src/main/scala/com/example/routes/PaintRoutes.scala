@@ -98,7 +98,7 @@ trait PaintRoutes extends BaseRoutes {
   def validateAndProcessPaintRequest(paintRequest: PaintRequest, inputBuilder: () => String, onSuccessResponse: String => Route)(implicit user: ApiUser): Route = {
     //validate request first before further processing
     PaintRequestValidater.validate(paintRequest) map (errorCode =>
-      completeWithApiRequestRecordAdded(errorCode, errorCode.reason, errorCode)) getOrElse onSuccess {
+      completeWithApiRequestRecordAdded(errorCode, errorCode.reason, (errorCode, errorCode.reason))) getOrElse onSuccess {
       // cache ws result based on input string
       val input = inputBuilder()
       val requestIfNoCahcheFound = (paintWsActor ? ApiUserRequest(user.id, input)).mapTo[String]

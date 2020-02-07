@@ -15,12 +15,13 @@ trait ApiUserTableDefinition extends TableDefinition { self: SlickDbConfig =>
 
   class ApiUserTable(tag: Tag) extends BaseTable[ApiUser](tag, "api_user") {
 
-    val appId = column[String]("app_id", O.Length(64, varying = true))
-    val appKey = column[String]("app_key", O.Length(64, varying = true))
-    val email = column[String]("email", O.Length(128, varying = true))
+    val appId = column[String]("app_id", O.Length(64))
+    val appKey = column[String]("app_key", O.Length(64))
+    val email = column[String]("email", O.Length(128))
     val hasExpired = column[Boolean]("has_expired")
     val hasV1Access = column[Boolean]("has_v1_access")
-    val idx = index("app_creds_UNIQUE", (appId, appKey), unique = true)
+
+    def idx = index("app_creds_UNIQUE", (appId, appKey), unique = true)
 
     //Add id to *
     def * = (id, appId, appKey, email, hasExpired, hasV1Access, createdAt) <> (ApiUser.tupled, ApiUser.unapply)
