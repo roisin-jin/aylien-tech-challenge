@@ -2,7 +2,7 @@ lazy val akkaHttpVersion = "10.1.11"
 lazy val akkaVersion    = "2.6.3"
 
 lazy val root = (project in file(".")).
-  enablePlugins(DockerPlugin).
+  enablePlugins(JavaAppPackaging, DockerPlugin).
   settings(
     inThisBuild(List(
       organization    := "com.example",
@@ -31,11 +31,9 @@ lazy val root = (project in file(".")).
       "com.h2database"    % "h2"                        % "1.4.199"       % Test,
     ),
     dockerRepository := Some(sys.props.get("dockerRepository").getOrElse("gcr.io/mythic-emissary-266512")),
-    packageName in Docker := sys.props.get("dockerPackageName").getOrElse("paintFactory"),
+    packageName in Docker := sys.props.get("dockerPackageName").getOrElse("paint-factory"),
     version in Docker := sys.props.get("dockerPackageVersion").getOrElse("latest"),
     maintainer in Docker := "Roisin Jin <ringkinces@gmail.com>",
     dockerBaseImage := "openjdk:8u242-jre-slim",
-    dockerExposedPorts := Seq(9000),
-    dockerExposedVolumes += "/opt/docker/conf",
-    dockerEntrypoint += "-Dconfig.file=/opt/docker/conf/application.conf"
+    dockerExposedPorts := Seq(9000)
   )
