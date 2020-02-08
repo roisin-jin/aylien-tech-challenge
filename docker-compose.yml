@@ -1,0 +1,54 @@
+version: '3.7'
+
+services:
+  mysql-db:
+    build: ./mysql
+    volumes:
+      - db-data:/var/lib/db/mysql
+    networks:
+      - paint-factory
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: "paintFactoryDb123"
+      MYSQL_DATABASE: "paintFactoryDb"
+    ports:
+      - "3306:3306"
+    expose:
+      - "3306"
+
+  python-ws:
+    build: ./app
+    networks:
+      - paint-factory
+    restart: always
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+
+  akka-http:
+    depends_on: 
+      - mysql-db
+      - python-ws
+    build: 
+      context: ./akka-http-paint-factory
+      args:
+        - MYSQL_HOST=mysql-db
+        - PYTHON_HOST=python-ws
+    volumes:
+      - ./akka-http-paint-factory:/akka-http-paint-factory
+    environment:
+      - MYSQL_HOST=mysql-db
+      - PYTHON_HOST=python-ws
+    networks:
+      - paint-factory
+    ports:
+      - "9000:9000"
+    expose:
+      - "9000"
+
+volumes:
+  db-data:
+
+networks:
+  paint-factory:
+    driver: bridge

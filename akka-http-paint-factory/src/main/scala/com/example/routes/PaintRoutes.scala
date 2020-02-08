@@ -1,7 +1,7 @@
 package com.example.routes
 
 import java.sql.Timestamp
-import java.time.{Instant, ZoneId, ZonedDateTime}
+import java.time.{ Instant, ZoneId, ZonedDateTime }
 
 import akka.http.caching.scaladsl.Cache
 import akka.http.scaladsl.marshalling.ToResponseMarshallable
@@ -11,7 +11,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.pattern.ask
-import com.example.db.{ApiUser, ApiUserRequestRecord}
+import com.example.db.{ ApiUser, ApiUserRequestRecord }
 import com.example.service.DbRegistryActor._
 import com.example.service.PaintWsActor.ApiUserRequest
 import com.example.util._
@@ -63,10 +63,10 @@ trait PaintRoutes extends BaseRoutes {
     get(parameters("input") { inputStr =>
       val paintRequest = inputStr.parseJson.convertTo[InternalRequest].getConvertedPaintRequest
       validateAndProcessPaintRequest(paintRequest, () => inputStr, v1SuccessResp)
-    }) ~ post(entity(as[InternalRequest]) { inputEntity =>
+    }) ~ path("input")(post(entity(as[InternalRequest]) { inputEntity =>
       val paintRequest = inputEntity.getConvertedPaintRequest
       validateAndProcessPaintRequest(paintRequest, () => inputEntity.toJson.compactPrint, v1SuccessResp)
-    })
+    }))
   }
 
   // request history of user requests, sorted by most recent

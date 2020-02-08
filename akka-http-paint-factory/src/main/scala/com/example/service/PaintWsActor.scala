@@ -30,7 +30,7 @@ class PaintWsActor(implicit system: ActorSystem) extends Actor {
     case ApiUserRequest(userId, input) =>
       val replyTo = sender()
       val uri = Uri(PY_APP_URL + INDEX_PATH).withQuery(Query("input" -> input))
-      system.log.info("Forwarding input request to ", uri)
+      system.log.info("Forwarding input request {} to python ws", input)
       http.singleRequest(HttpRequest(HttpMethods.GET, uri)) onComplete {
         case Success(resp) =>
           system.log.info("Get response {} from paint ws", resp)
