@@ -8,6 +8,7 @@ lazy val root = (project in file(".")).
       scalaVersion    := "2.13.1"
     )),
     name := "akka-http-paint-factory",
+    parallelExecution in Test := false,
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http"                % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-http-spray-json"     % akkaHttpVersion,

@@ -21,9 +21,4 @@ class TestDbRegistryActor(implicit system: ActorSystem) extends DbRegistryActor 
   val apiUserDao = new ApiUserDao()
   val apiUserRequestRecordDao = new ApiUserRequestRecordDao()
 
-  def apply(implicit system: ActorSystem): TestDbRegistryActor = {
-    Await.result(db.run(apiUserDao.table.delete), 5.seconds)
-    this
-  }
-
 }
