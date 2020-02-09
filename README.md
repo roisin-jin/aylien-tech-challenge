@@ -42,7 +42,7 @@ This will generate a user with no access to ```V1``` endpoints by default. If yo
 
 Afterwards, use ```/admin/users``` to check for new users just being added in
 
-8. Cache is turned on for user credentials. So if any user's access is turned off it wont activate until the cache expires. Also ws result from the python app can be cached as well
+8. Cache is turned on for user credentials. So if any user's access is turned off it wont activate until the cache expires. Also the WS result from the python app can be cached as well
 
 9. Rate limite is currently set to 5 requests per second
 
