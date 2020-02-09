@@ -5,50 +5,66 @@ Akka-http App:
 
 1. Setup Http server with endpoints, config files
 0.5D
+actual time spent: 0.5 - 1D
 
 2. Define http headers for credentials check, setup https certification to support server-side HTTPS
 0.5D
+actual time spent: 0.5D
 
 3. Proper authentication and authorization handling on credentials
 0.5D for dev and unit test
+actual time spent: 0.5D - 1D
 
 4. Setup cache for user lookup and response from external ws service
 0.5D
+actual time spent: 0.5D
 
 5. Design V2 request format with validation checkup rules, each with unique error code
-1D for dev, 0.5D for unit test
+1D for dev and unit test
+actual time spent: 0.5D - 1D
 
 6. Inject service to delegate related requests
 2H
+actual time spent: 2H
 
 7. Integration test with different scenarios
 0.5D
-
+actual time spent: 1D
 
 DB:
 
 1. Setup slick with JDBC connector (MYSQL and H2)
 0.5D
+actual time spent: 0.5D
 
 2. Create entity, table, dao for user and user request record
 1D for dev and unit test
+actual time spent: 2D
 
 3. Create DB actor to handle DB service requests
 1D for dev and unit test
+actual time spent: 2D
 
 4. Setup MYSQL for product with schema scripts and pre-loaded data
 0.5D
+actual time spent: 0.5D
 
 
 Connecting to internal python APP:
-1. Config python app address
-2. Create WS actor to forward paint requests to the python app
+1. Create WS actor to forward paint requests to the python app
 1D for dev and integration test
+actual time spent: 1D
+
+2. Parse result back from the python APP
+0.5D for dev
+actual time spent: 0.5D
 
 Deployment:
 
 1. Dockernize Akka-http app, python app and mysql
 0.5D
+actual time spent: 1 - 1.5D
 
-2. Create yaml file for deploying to kubernetes
-1D?
+2. Create yaml files for kubernetes deployment setup
+0.5D
+actual time spent: 0.5D
