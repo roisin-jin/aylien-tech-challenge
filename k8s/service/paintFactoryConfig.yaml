@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: paint-factory-config
+  namespace: prod
+data:
+  mysql_database: "paintFactoryDb"

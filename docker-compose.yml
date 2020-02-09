@@ -2,6 +2,7 @@ version: '3.7'
 
 services:
   mysql-db:
+    image: mysql-db:lastest
     build: ./mysql
     volumes:
       - db-data:/var/lib/db/mysql
@@ -17,6 +18,7 @@ services:
       - "3306"
 
   python-ws:
+    image: python-ws:latest
     build: ./app
     networks:
       - paint-factory
@@ -26,6 +28,7 @@ services:
       - "8081:8081"
 
   akka-http:
+    image: akka-http-paint-factory:latest
     depends_on: 
       - mysql-db
       - python-ws
@@ -34,6 +37,10 @@ services:
       args:
         - MYSQL_HOST=mysql-db
         - PYTHON_HOST=python-ws
+        - HTTPS_ENABLED=true
+        - HTTPS_SECRET=paintHttpsSercret123
+        - SUPER_ADMIN_ID=testAdminId
+        - SUPER_ADMIN_KEY=testAdminKey
     volumes:
       - ./akka-http-paint-factory:/akka-http-paint-factory
     environment:

@@ -1,0 +1,106 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pv-claim
+  labels:
+    app: paintfactoryservice
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: paintfactoryservice
+  labels:
+    app: paintfactoryservice
+    deployment: prod
+  namespace: prod
+spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  replicas: 2
+  selector:
+    matchLabels:
+      app: paintfactoryservice
+      deployment: prod
+  template:
+    metadata:
+      labels:
+        app: paintfactoryservice
+        deployment: prod
+    spec:
+      restartPolicy: Always
+      containers:
+        - name: python-ws
+          image: gcr.io/roisin-2019/api/python-ws:latest
+          ports:
+            - containerPort: 8080
+            - containerPort: 8081
+        - name: akka-http-paint-factory
+          image: gcr.io/roisin-2019/api/akka-http-paint-factory:latest
+          ports:
+            - containerPort: 9000
+          env:
+            - name: MYSQL_HOST
+            - value: "mysql-db"
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: paint-factory-secrets
+                  key: mysql_user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: paint-factory-secrets
+                  key: mysql_password
+            - name: SUPER_ADMIN_ID
+              valueFrom:
+                secretKeyRef:
+                  name: paint-factory-secrets
+                  key: super_user_id
+            - name: SUPER_ADMIN_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: paint-factory-secrets
+                  key: super_user_key
+            - name: PYTHON_HOST
+              value: "python-ws"
+            - name: HTTPS_ENABLED
+              value: false
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "1"
+        - name: mysql-db
+          image: gcr.io/roisin-2019/mysql-db:latest
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+            - valueFrom:
+              secretKeyRef:
+                name: paint-factory-secrets
+                key: mysql_password
+            - name: MYSQL_DATABASE
+            - valueFrom:
+              configMapKeyRef:
+                name: paint-factory-config
+                key: mysql_database
+          ports:
+            - containerPort: 3306
+          livenessProbe:
+            tcpSocket:
+              port: 3306
+          volumeMounts:
+            - name: mysql-persistent-storage
+            mountPath: /var/lib/mysql
+
+      volumes:
+        - name: mysql-persistent-storage
+        persistentVolumeClaim:
+          claimName: mysql-pv-claim
