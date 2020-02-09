@@ -8,7 +8,7 @@ import akka.http.scaladsl.marshalling.ToResponseMarshallable
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.HttpChallenges
 import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.{ InvalidRequiredValueForQueryParamRejection, MalformedQueryParamRejection, Route }
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.pattern.ask
 import com.example.db.{ ApiUser, ApiUserRequestRecord }
@@ -74,11 +74,17 @@ trait PaintRoutes extends BaseRoutes {
   // offset set to 0 by default
   def v2Routes(implicit user: ApiUser): Route =
     pathPrefix("history")(parameterMap { params =>
-      val pageSize: Int = math.min(params.getOrElse("pageSize", "50").toInt, 100)
       val offSet: Int = params.getOrElse("offSet", "0").toInt
-      val getHistoryRequest = GetUserRequestRecords(user.id, pageSize, offSet)
-      val response = (dbRegistryActor ? getHistoryRequest).mapTo[GetUserRequestRecordsResponse]
-      onSuccess(response)(result => complete((StatusCodes.OK, result)))
+      val pageSize: Int = math.min(params.getOrElse("pageSize", "50").toInt, 100)
+      if (offSet < 0 || pageSize < 0) {
+        val queryParams: Seq[(String, Int)] = Seq("offSet" -> offSet, "pageSize" -> pageSize)
+        val rejections = queryParams filter (_._2 < 0) map (x => MalformedQueryParamRejection(x._1, s"${x._1} cannot be less then 0!"))
+        reject(rejections: _*)
+      } else {
+        val getHistoryRequest = GetUserRequestRecords(user.id, pageSize, offSet)
+        val response = (dbRegistryActor ? getHistoryRequest).mapTo[GetUserRequestRecordsResponse]
+        onSuccess(response)(result => complete((StatusCodes.OK, result)))
+      }
     }) ~
       (path("solve") & postSession) (entity(as[PaintRequest])(paintRequest =>
         validateAndProcessPaintRequest(paintRequest, () => paintRequest.getConvertedInternalRequest.toJson.compactPrint, _ match {
