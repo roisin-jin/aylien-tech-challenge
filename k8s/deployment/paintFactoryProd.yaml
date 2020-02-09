@@ -39,12 +39,12 @@ spec:
       restartPolicy: Always
       containers:
         - name: python-ws
-          image: gcr.io/roisin-2019/api/python-ws:latest
+          image: gcr.io/roisin-2019/api/python-ws:paintFactory
           ports:
             - containerPort: 8080
             - containerPort: 8081
         - name: akka-http-paint-factory
-          image: gcr.io/roisin-2019/api/akka-http-paint-factory:latest
+          image: gcr.io/roisin-2019/api/akka-http:paintFactory
           ports:
             - containerPort: 9000
           env:
@@ -79,7 +79,7 @@ spec:
               memory: "2Gi"
               cpu: "1"
         - name: mysql-db
-          image: gcr.io/roisin-2019/mysql-db:latest
+          image: gcr.io/roisin-2019/mysql-db:paintFactory
           env:
             - name: MYSQL_ROOT_PASSWORD
             - valueFrom:

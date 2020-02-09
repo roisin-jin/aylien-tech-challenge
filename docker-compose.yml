@@ -2,7 +2,7 @@ version: '3.7'
 
 services:
   mysql-db:
-    image: mysql-db:lastest
+    image: mysql-db:paintFactory
     build: ./mysql
     volumes:
       - db-data:/var/lib/db/mysql
@@ -18,7 +18,7 @@ services:
       - "3306"
 
   python-ws:
-    image: python-ws:latest
+    image: python-ws:paintFactory
     build: ./app
     networks:
       - paint-factory
@@ -28,7 +28,7 @@ services:
       - "8081:8081"
 
   akka-http:
-    image: akka-http-paint-factory:latest
+    image: akka-http:paintFactory
     depends_on: 
       - mysql-db
       - python-ws
