@@ -4,7 +4,7 @@
 
 This API is built on top of the original python app, with akka-http as the new front API gateway service. Akka-http is mainly responsible for user credentials authentication and authorization, rate limite check. Also it validates the incoming requests from client, once its validated then it forwards the request to the internal python webserivce
 
-1. When in local enviorment, just run ```dockercompose-up``` (This could take a coule of minutes, please wait until the akka-http container launches)
+1. When in local enviorment, just run ```docker-compose up``` (This could take a coule of minutes, please wait until the akka-http container launches)
 
 2. Hosted on https://0.0.0.0:9000 with self-signed ssh certificate to support local HTTPS context setting. When using Postman to interact please turn off ssl-certificate verifiaction in settings/general; when using ```curl```, please add flag ```--insecure```
 
